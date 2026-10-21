@@ -1,52 +1,133 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getSimulatedSample } from "../services/telemetry";
+import {
+  createEventOnlyTelemetrySource,
+  getSimulatedSample,
+} from "../services/telemetry";
 import { DEMO_EVENTS, DEMO_SESSIONS } from "../data/demo";
 import {
   classifyMagnitude,
+  DEFAULT_THRESHOLDS,
   getMagnitude,
   haversineDistanceKm,
 } from "../domain/monitoring";
+import { getFreshness, TELEMETRY_STALE_AFTER_MS } from "../domain/freshness";
 import type {
   DrivingSession,
   ImpactEvent,
+  TelemetryMode,
   TelemetrySample,
   Thresholds,
 } from "../domain/types";
 
-export function useMonitor() {
-  const [available, setAvailable] = useState(true);
-  const [thresholds, setThresholds] = useState<Thresholds>({
-    t1: 0.8,
-    t2: 1.8,
-  });
-  const [session, setSession] = useState<DrivingSession>(() => ({
-    id: `session-${Date.now()}`,
+type ModeHistory = {
+  session: DrivingSession;
+  sessions: DrivingSession[];
+  events: ImpactEvent[];
+};
+function createSession(source: TelemetryMode): DrivingSession {
+  return {
+    id: crypto.randomUUID(),
+    source,
     startedAt: Date.now(),
     endedAt: null,
-    distanceKm: 0,
+    distanceKm: source === "simulation" ? 0 : null,
     impactCount: 0,
-    maxMagnitude: 0,
+    maxMagnitude: source === "simulation" ? 0 : null,
+  };
+}
+
+export function useMonitor() {
+  const [mode, updateMode] = useState<TelemetryMode>("simulation");
+  const [connected, updateConnected] = useState(true);
+  const [deviceConnected, setDeviceConnected] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [thresholds, setThresholds] = useState<Thresholds>(DEFAULT_THRESHOLDS);
+  const [modeHistories, setModeHistories] = useState<
+    Record<TelemetryMode, ModeHistory>
+  >(() => ({
+    simulation: {
+      session: createSession("simulation"),
+      sessions: DEMO_SESSIONS,
+      events: DEMO_EVENTS,
+    },
+    "event-only": {
+      session: createSession("event-only"),
+      sessions: [],
+      events: [],
+    },
   }));
-  const [sessions, setSessions] = useState<DrivingSession[]>(DEMO_SESSIONS);
-  const [events, setEvents] = useState<ImpactEvent[]>(DEMO_EVENTS);
-  const [sample, setSample] = useState<TelemetrySample>(() =>
-    getSimulatedSample(0, session.startedAt),
-  );
+  const { session, sessions, events } = modeHistories[mode];
+  const [sample, setSample] = useState<TelemetrySample | null>(null);
   const [history, setHistory] = useState<TelemetrySample[]>([]);
+  const [lastReceivedAt, setLastReceivedAt] = useState<number | null>(null);
+  const [lastEventReceivedAt, setLastEventReceivedAt] = useState<number | null>(
+    null,
+  );
   const [now, setNow] = useState(Date.now());
   const [notice, setNotice] = useState("");
+  const [testEventSeverity, setTestEventSeverity] = useState<
+    "warning" | "critical"
+  >("warning");
   const impactUntil = useRef(0);
   const activeEventId = useRef<string | null>(null);
-  const previousPosition = useRef<TelemetrySample | null>(null);
+  const previousSample = useRef<TelemetrySample | null>(null);
   const sessionRef = useRef(session);
+  const eventSource = useRef<ReturnType<
+    typeof createEventOnlyTelemetrySource
+  > | null>(null);
+  if (!eventSource.current)
+    eventSource.current = createEventOnlyTelemetrySource();
   sessionRef.current = session;
+
+  // Event-only transport never invokes the continuous sampler. Local test events
+  // exercise this boundary without claiming a connected ESP32 or phone gateway.
+  useEffect(() => {
+    if (mode !== "event-only") return;
+    return eventSource.current!.subscribe((message) => {
+      if (message.type === "connection") {
+        setDeviceConnected(message.connected);
+        return;
+      }
+      if (message.type !== "event") return;
+      const receivedAt = Date.now();
+      if (message.source === "device") setLastReceivedAt(receivedAt);
+      setLastEventReceivedAt(receivedAt);
+      const event: ImpactEvent = {
+        ...message.event,
+        source: message.source,
+        sessionId: sessionRef.current.id,
+      };
+      setModeHistories((old) => {
+        const current = old["event-only"];
+        if (current.events.some((item) => item.id === event.id)) return old;
+        return {
+          ...old,
+          "event-only": {
+            ...current,
+            events: [event, ...current.events],
+            session: {
+              ...current.session,
+              impactCount: current.session.impactCount + 1,
+              maxMagnitude:
+                event.magnitude === null
+                  ? current.session.maxMagnitude
+                  : Math.max(
+                      current.session.maxMagnitude ?? 0,
+                      event.magnitude,
+                    ),
+            },
+          },
+        };
+      });
+    });
+  }, [mode]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       const timestamp = Date.now();
       setNow(timestamp);
-      if (!available) {
-        previousPosition.current = null;
+      if (mode !== "simulation" || !connected || paused) {
+        previousSample.current = null;
         activeEventId.current = null;
         return;
       }
@@ -59,61 +140,78 @@ export function useMonitor() {
         next.acceleration = { x: 1.74, y: 1.42, z: 0.86 };
       const magnitude = getMagnitude(next.acceleration);
       const status = classifyMagnitude(magnitude, thresholds);
-      const distance = previousPosition.current
-        ? haversineDistanceKm(previousPosition.current.position, next.position)
-        : 0;
-      previousPosition.current = next;
+      const previous = previousSample.current;
+      const distance =
+        previous && timestamp - previous.timestamp <= TELEMETRY_STALE_AFTER_MS
+          ? haversineDistanceKm(previous.position, next.position)
+          : 0;
+      previousSample.current = next;
       setSample(next);
-      setHistory((old) => [...old.slice(-47), next]);
+      setLastReceivedAt(timestamp);
+      setHistory((old) => [
+        ...old.filter((item) => timestamp - item.timestamp < 24_000).slice(-47),
+        next,
+      ]);
       const isImpact = status === "critical" || status === "warning";
       const isNewEvent = isImpact && activeEventId.current === null;
-      if (isImpact) {
-        if (isNewEvent) {
-          const id = crypto.randomUUID();
-          activeEventId.current = id;
-          setEvents((old) => [
+      if (isNewEvent) activeEventId.current = crypto.randomUUID();
+      const eventId = activeEventId.current;
+      if (!isImpact) activeEventId.current = null;
+      setModeHistories((old) => {
+        const current = old.simulation;
+        let nextEvents = current.events;
+        if (isImpact && isNewEvent) {
+          nextEvents = [
             {
-              id,
+              id: eventId!,
+              source: "simulation",
               timestamp,
               position: { ...next.position },
               magnitude,
               severity: status,
               sessionId: currentSession.id,
             },
-            ...old,
-          ]);
-        } else {
-          const id = activeEventId.current;
-          setEvents((old) =>
-            old.map((event) => {
-              if (event.id !== id) return event;
-              const isPeak = magnitude > event.magnitude;
-              const escalated =
-                status === "critical" && event.severity === "warning";
-              if (!isPeak && !escalated) return event;
-              return {
-                ...event,
-                severity:
-                  event.severity === "critical" || status === "critical"
-                    ? "critical"
-                    : "warning",
-                ...(isPeak
-                  ? { magnitude, timestamp, position: { ...next.position } }
-                  : {}),
-              };
-            }),
-          );
+            ...nextEvents,
+          ];
+        } else if (isImpact) {
+          nextEvents = nextEvents.map((event) => {
+            if (event.id !== eventId) return event;
+            const isPeak = magnitude > (event.magnitude ?? 0);
+            const escalated =
+              status === "critical" && event.severity === "warning";
+            if (!isPeak && !escalated) return event;
+            return {
+              ...event,
+              severity:
+                event.severity === "critical" || status === "critical"
+                  ? "critical"
+                  : "warning",
+              ...(isPeak
+                ? { magnitude, timestamp, position: { ...next.position } }
+                : {}),
+            };
+          });
         }
-      } else activeEventId.current = null;
-      setSession((old) => ({
-        ...old,
-        distanceKm: old.distanceKm + distance,
-        maxMagnitude: Math.max(old.maxMagnitude, magnitude),
-        impactCount: old.impactCount + (isNewEvent ? 1 : 0),
-      }));
+        return {
+          ...old,
+          simulation: {
+            ...current,
+            events: nextEvents,
+            session: {
+              ...current.session,
+              distanceKm: (current.session.distanceKm ?? 0) + distance,
+              maxMagnitude: Math.max(
+                current.session.maxMagnitude ?? 0,
+                magnitude,
+              ),
+              impactCount: current.session.impactCount + (isNewEvent ? 1 : 0),
+            },
+          },
+        };
+      });
     }, 500);
     return () => window.clearInterval(timer);
-  }, [available, thresholds]);
+  }, [mode, connected, paused, thresholds]);
 
   useEffect(() => {
     if (!notice) return;
@@ -121,41 +219,84 @@ export function useMonitor() {
     return () => window.clearTimeout(timeout);
   }, [notice]);
 
+  function clearLiveData() {
+    setSample(null);
+    setHistory([]);
+    setLastReceivedAt(null);
+    previousSample.current = null;
+    activeEventId.current = null;
+    impactUntil.current = 0;
+  }
+  function setMode(next: TelemetryMode) {
+    if (next === mode) return;
+    clearLiveData();
+    setPaused(false);
+    updateMode(next);
+    setNow(Date.now());
+  }
+  function setAvailable(next: boolean) {
+    updateConnected(next);
+    clearLiveData();
+    setNow(Date.now());
+  }
+  const freshness = getFreshness({
+    connected: mode === "simulation" ? connected : deviceConnected,
+    lastReceivedAt,
+    now,
+  });
+  const available =
+    mode === "simulation" && freshness === "fresh" && sample !== null;
   const simulateImpact = useCallback(() => {
-    if (!available) return;
+    if (!available || paused) return;
     impactUntil.current = Date.now() + 2500;
     setNotice("Impact injected into the simulated data feed.");
-  }, [available]);
-
+  }, [available, paused]);
+  function injectTestEvent() {
+    if (mode !== "event-only") return;
+    eventSource.current!.emitTestEvent({
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      severity: testEventSeverity,
+      magnitude: null,
+      position: null,
+    });
+    setNow(Date.now());
+    setNotice("Local test event received. No device is connected.");
+  }
   function newSession() {
     const timestamp = Date.now();
-    setSessions((old) => [{ ...session, endedAt: timestamp }, ...old]);
-    const next = {
-      id: `session-${timestamp}`,
-      startedAt: timestamp,
-      endedAt: null,
-      distanceKm: 0,
-      impactCount: 0,
-      maxMagnitude: 0,
-    };
-    setSession(next);
-    setHistory([]);
-    setSample(getSimulatedSample(0, timestamp));
-    previousPosition.current = null;
-    impactUntil.current = 0;
-    activeEventId.current = null;
-    setNotice("Previous session saved. A new driving session is recording.");
+    const nextSession = createSession(mode);
+    setModeHistories((old) => ({
+      ...old,
+      [mode]: {
+        ...old[mode],
+        sessions: [
+          { ...old[mode].session, endedAt: timestamp },
+          ...old[mode].sessions,
+        ],
+        session: nextSession,
+      },
+    }));
+    clearLiveData();
+    setNow(timestamp);
+    setNotice("Previous session saved. A new session has started.");
   }
-
   function exportData() {
     const blob = new Blob(
       [
         JSON.stringify(
           {
-            schemaVersion: 1,
-            source: "simulation",
+            schemaVersion: 2,
+            source: mode,
             exportedAt: new Date().toISOString(),
-            thresholds,
+            thresholds: { ...thresholds, scope: "simulation-only" },
+            telemetry: {
+              connected: mode === "simulation" ? connected : deviceConnected,
+              freshness,
+              lastReceivedAt,
+              lastEventReceivedAt,
+              currentMotionConfirmed: available,
+            },
             sessions: [session, ...sessions],
             events,
           },
@@ -168,15 +309,26 @@ export function useMonitor() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `msd-simulation-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `msd-${mode}-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    setNotice("Simulation data exported as JSON.");
+    setNotice("Telemetry data exported as JSON.");
   }
-
   return {
+    mode,
+    setMode,
+    connected: mode === "simulation" ? connected : deviceConnected,
+    paused,
+    setPaused,
     available,
     setAvailable,
+    freshness,
+    lastReceivedAt,
+    lastEventReceivedAt,
+    latestEvent: events[0] ?? null,
+    testEventSeverity,
+    setTestEventSeverity,
+    injectTestEvent,
     thresholds,
     setThresholds,
     session,
@@ -190,7 +342,7 @@ export function useMonitor() {
     newSession,
     exportData,
     severity: classifyMagnitude(
-      available ? getMagnitude(sample.acceleration) : null,
+      available && sample ? getMagnitude(sample.acceleration) : null,
       thresholds,
     ),
   };

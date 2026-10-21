@@ -34,8 +34,12 @@ export function SessionTable({
                       {date(session.startedAt)} · {time(session.startedAt)}
                     </strong>
                     <span>
+                      {session.source === "simulation"
+                        ? "Simulated"
+                        : "Event-only preview"}{" "}
+                      ·{" "}
                       {session.endedAt
-                        ? `San Francisco · Drive ${sessions.length - index}`
+                        ? `Drive ${sessions.length - index}`
                         : "Current driving session"}
                     </span>
                   </div>
@@ -45,7 +49,13 @@ export function SessionTable({
                 {duration((session.endedAt ?? now) - session.startedAt)}
               </td>
               <td className="number-cell">
-                {session.distanceKm.toFixed(2)} <span>km</span>
+                {session.distanceKm === null ? (
+                  "Not available"
+                ) : (
+                  <>
+                    {session.distanceKm.toFixed(2)} <span>km</span>
+                  </>
+                )}
               </td>
               <td>{session.impactCount}</td>
               <td>

@@ -16,7 +16,7 @@ export function validateThresholds({ t1, t2 }: Thresholds): string | null {
   return null;
 }
 
-/** Exact threshold values enter the higher severity band. Invalid/missing data is gray. */
+/** Green: A < T1; yellow: T1 <= A <= T2; red: A > T2. Missing/invalid data is gray. */
 export function classifyMagnitude(
   magnitude: number | null,
   thresholds: Thresholds,
@@ -29,7 +29,7 @@ export function classifyMagnitude(
   )
     return "unavailable";
 
-  if (magnitude >= thresholds.t2) return "critical";
+  if (magnitude > thresholds.t2) return "critical";
   if (magnitude >= thresholds.t1) return "warning";
   return "normal";
 }

@@ -57,10 +57,11 @@ export function ThresholdDialog({
             <X size={20} />
           </button>
         </div>
-        <h2 id="threshold-title">Make safety your own.</h2>
+        <h2 id="threshold-title">Demo thresholds</h2>
         <p>
-          Set the acceleration levels that trigger impact alerts. Changes apply
-          to the live simulation immediately.
+          Set the acceleration levels used by the live simulation. These local
+          demo settings are not sent to a device and do not reclassify recorded
+          events.
         </p>
         <label className="threshold-input">
           <span>
@@ -107,8 +108,9 @@ export function ThresholdDialog({
           </p>
         )}
         <div className="threshold-explanation">
-          Alerts use the resultant of all three acceleration axes, with gravity
-          removed. Values at T1 trigger warning; values at T2 trigger critical.
+          With resultant acceleration A and gravity removed: green is A &lt; T1;
+          yellow is T1 ≤ A ≤ T2; red is A &gt; T2. Both exact thresholds are
+          yellow. Event-only mode preserves each packet’s reported severity.
         </div>
         <div className="dialog-footer">
           <button type="button" className="button secondary" onClick={onClose}>

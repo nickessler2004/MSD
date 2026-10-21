@@ -9,6 +9,11 @@ export function EventTable({
   events: ImpactEvent[];
   compact?: boolean;
 }) {
+  const sourceLabels = {
+    simulation: "Simulated",
+    "test-event": "Test event",
+    device: "Device event",
+  };
   const visible = compact ? events.slice(0, 4) : events;
   return (
     <div className="table-scroll">
@@ -31,7 +36,9 @@ export function EventTable({
                   </span>
                   <div>
                     <strong>{time(event.timestamp)}</strong>
-                    <span>{date(event.timestamp)} · Simulated</span>
+                    <span>
+                      {date(event.timestamp)} · {sourceLabels[event.source]}
+                    </span>
                   </div>
                 </div>
               </td>
@@ -42,13 +49,25 @@ export function EventTable({
                 </span>
               </td>
               <td className="number-cell">
-                {event.magnitude.toFixed(2)} <span>g</span>
+                {event.magnitude === null ? (
+                  "Not supplied"
+                ) : (
+                  <>
+                    {event.magnitude.toFixed(2)} <span>g</span>
+                  </>
+                )}
               </td>
               <td>
                 <span className="location-cell">
-                  <MapPin size={13} />
-                  {event.position.latitude.toFixed(4)},{" "}
-                  {event.position.longitude.toFixed(4)}
+                  {event.position === null ? (
+                    "Not supplied"
+                  ) : (
+                    <>
+                      <MapPin size={13} />
+                      {event.position.latitude.toFixed(4)},{" "}
+                      {event.position.longitude.toFixed(4)}
+                    </>
+                  )}
                 </span>
               </td>
             </tr>
@@ -59,7 +78,10 @@ export function EventTable({
         <div className="empty-state">
           <ShieldCheck size={30} />
           <strong>No impacts recorded</strong>
-          <p>New events will appear here when a threshold is crossed.</p>
+          <p>
+            No threshold events have been recorded. An empty log does not
+            confirm safe motion.
+          </p>
         </div>
       )}
     </div>

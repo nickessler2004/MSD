@@ -1,10 +1,15 @@
 import { haversineDistanceKm } from "../domain/monitoring";
-import type { Coordinates, TelemetrySample } from "../domain/types";
+import type {
+  Coordinates,
+  TelemetryMessage,
+  TelemetrySample,
+  ThresholdEvent,
+} from "../domain/types";
 
 /**
- * Boundary for future ESP32-S3 → phone gateway adapters.
- * An adapter emits normalized, gravity-compensated g values and null on signal loss.
- * Consumers never need to know which transport supplies the samples.
+ * Continuous sample source for the live simulation only.
+ * Real ESP32-S3 integration must use event messages instead; threshold-only packets
+ * cannot establish a current acceleration, speed, GPS fix, or confirmed green state.
  */
 export interface TelemetrySource {
   subscribe(onSample: (sample: TelemetrySample | null) => void): () => void;
@@ -102,6 +107,64 @@ export function createSimulatedTelemetrySource(
       emit();
       const timer = setInterval(emit, intervalMs);
       return () => clearInterval(timer);
+    },
+  };
+}
+
+/** Sparse message boundary for the future phone gateway. No transport is connected here. */
+export interface EventOnlyTelemetrySource {
+  subscribe(onMessage: (message: TelemetryMessage) => void): () => void;
+  /** Local preview fixture only: does not establish a physical-device connection. */
+  emitTestEvent(event: ThresholdEvent): void;
+}
+
+function validateThresholdEvent(event: ThresholdEvent): void {
+  if (
+    !event ||
+    typeof event.id !== "string" ||
+    event.id.trim() === "" ||
+    !Number.isFinite(event.timestamp) ||
+    event.timestamp <= 0 ||
+    (event.severity !== "warning" && event.severity !== "critical") ||
+    (event.magnitude !== null &&
+      (!Number.isFinite(event.magnitude) || event.magnitude < 0)) ||
+    (event.position !== null &&
+      (!event.position ||
+        !Number.isFinite(event.position.latitude) ||
+        !Number.isFinite(event.position.longitude) ||
+        Math.abs(event.position.latitude) > 90 ||
+        Math.abs(event.position.longitude) > 180))
+  ) {
+    throw new TypeError("Invalid threshold event packet.");
+  }
+}
+
+/**
+ * Local event-only preview: emits explicit test fixtures on demand, never continuous
+ * readings, heartbeats, inferred green status, or a fabricated device connection.
+ * The firmware-reported severity is retained independently of dashboard thresholds.
+ */
+export function createEventOnlyTelemetrySource(): EventOnlyTelemetrySource {
+  const listeners = new Set<(message: TelemetryMessage) => void>();
+  return {
+    subscribe(onMessage) {
+      const listener = (message: TelemetryMessage) => onMessage(message);
+      listeners.add(listener);
+      onMessage({ type: "connection", connected: false });
+      return () => listeners.delete(listener);
+    },
+    emitTestEvent(event) {
+      validateThresholdEvent(event);
+      for (const listener of listeners) {
+        listener({
+          type: "event",
+          source: "test-event",
+          event: {
+            ...event,
+            position: event.position ? { ...event.position } : null,
+          },
+        });
+      }
     },
   };
 }

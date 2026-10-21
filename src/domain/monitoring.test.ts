@@ -15,16 +15,20 @@ import {
 } from "../services/telemetry";
 
 describe("impact classification", () => {
-  it("classifies both threshold boundaries into the higher band", () => {
+  it("includes both threshold boundaries in yellow and requires A > T2 for red", () => {
     expect(classifyMagnitude(0.799, DEFAULT_THRESHOLDS)).toBe("normal");
     expect(classifyMagnitude(0.8, DEFAULT_THRESHOLDS)).toBe("warning");
     expect(classifyMagnitude(1.799, DEFAULT_THRESHOLDS)).toBe("warning");
-    expect(classifyMagnitude(1.8, DEFAULT_THRESHOLDS)).toBe("critical");
+    expect(classifyMagnitude(1.8, DEFAULT_THRESHOLDS)).toBe("warning");
+    expect(classifyMagnitude(1.801, DEFAULT_THRESHOLDS)).toBe("critical");
   });
 
   it("uses adjusted thresholds immediately", () => {
     expect(classifyMagnitude(1.2, { t1: 1.5, t2: 3 })).toBe("normal");
     expect(classifyMagnitude(1.2, { t1: 0.5, t2: 1 })).toBe("critical");
+    expect(classifyMagnitude(1, { t1: 1, t2: 2 })).toBe("warning");
+    expect(classifyMagnitude(2, { t1: 1, t2: 2 })).toBe("warning");
+    expect(classifyMagnitude(2.001, { t1: 1, t2: 2 })).toBe("critical");
   });
 
   it.each([null, Number.NaN, Number.POSITIVE_INFINITY, -1])(
