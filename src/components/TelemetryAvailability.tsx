@@ -16,7 +16,7 @@ export function TelemetryAvailability({
   now,
 }: {
   mode: TelemetryMode;
-  onModeChange: (mode: TelemetryMode) => void;
+  onModeChange: (mode: TelemetryMode | "cloud") => void;
   connected: boolean;
   freshness: TelemetryFreshness;
   lastReceivedAt: number | null;
@@ -38,11 +38,12 @@ export function TelemetryAvailability({
           id="telemetry-source"
           value={mode}
           onChange={(event) =>
-            onModeChange(event.target.value as TelemetryMode)
+            onModeChange(event.target.value as TelemetryMode | "cloud")
           }
         >
           <option value="simulation">Live simulation</option>
           <option value="event-only">Event-only preview</option>
+          <option value="cloud">Supabase cloud</option>
         </select>
       </div>
       <div className="telemetry-health">
