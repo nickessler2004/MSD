@@ -36,8 +36,8 @@ function createSession(source: TelemetryMode): DrivingSession {
   };
 }
 
-export function useMonitor() {
-  const [mode, updateMode] = useState<TelemetryMode>("simulation");
+export function useMonitor(initialMode: TelemetryMode = "simulation") {
+  const [mode, updateMode] = useState<TelemetryMode>(initialMode);
   const [connected, updateConnected] = useState(true);
   const [deviceConnected, setDeviceConnected] = useState(false);
   const [paused, setPaused] = useState(false);

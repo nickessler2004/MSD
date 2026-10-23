@@ -9,7 +9,7 @@ export default defineConfig({
   workers: 2,
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: "http://127.0.0.1:5175",
     viewport: { width: 1440, height: 1000 },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
@@ -18,9 +18,14 @@ export default defineConfig({
       : {},
   },
   webServer: {
-    command: "npm run dev -- --port 5173",
-    url: "http://127.0.0.1:5173",
-    reuseExistingServer: true,
+    command: "npm run dev -- --port 5175 --strictPort",
+    url: "http://127.0.0.1:5175",
+    reuseExistingServer: !process.env.CI,
+    env: {
+      // Public, nonfunctional fixtures are intercepted by cloud browser tests only.
+      VITE_SUPABASE_URL: "https://msd-test.supabase.co",
+      VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_msd_browser_test_fixture",
+    },
     timeout: 30_000,
   },
 });

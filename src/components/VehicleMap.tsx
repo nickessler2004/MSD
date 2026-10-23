@@ -16,6 +16,10 @@ export type VehicleMapProps = {
   }>;
   route: Coordinates[];
   available: boolean;
+  sourceLabel?: string;
+  mapLabel?: string;
+  gpsStatusLabel?: string;
+  fitRoute?: boolean;
 };
 
 const MAP_BOUNDS: L.LatLngBoundsExpression = [
@@ -74,6 +78,10 @@ export function VehicleMap({
   events,
   route,
   available,
+  sourceLabel = "MSD-001 · simulated vehicle",
+  mapLabel = "Live GPS map of the simulated vehicle in San Francisco",
+  gpsStatusLabel = "GPS connected",
+  fitRoute = false,
 }: VehicleMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -81,6 +89,7 @@ export function VehicleMap({
   const routeLayers = useRef<L.LayerGroup | null>(null);
   const eventLayers = useRef<L.LayerGroup | null>(null);
   const following = useRef(true);
+  const hasFitRoute = useRef(false);
   const currentPosition = useRef(position);
   const [offline, setOffline] = useState(true);
   const [isFollowing, setIsFollowing] = useState(true);
@@ -97,6 +106,7 @@ export function VehicleMap({
       attributionControl: true,
     });
     map.current = instance;
+    hasFitRoute.current = false;
     L.imageOverlay(offlineMapImage(), MAP_BOUNDS, {
       opacity: 1,
       interactive: false,
@@ -119,7 +129,7 @@ export function VehicleMap({
       zIndexOffset: 1000,
       keyboard: false,
     }).addTo(instance);
-    vehicle.current.bindTooltip("MSD-001 · simulated vehicle", {
+    vehicle.current.bindTooltip(sourceLabel, {
       direction: "top",
       offset: [0, -25],
     });
@@ -222,6 +232,21 @@ export function VehicleMap({
     });
   }, [events]);
 
+  useEffect(() => {
+    if (!fitRoute || hasFitRoute.current || !map.current || route.length === 0)
+      return;
+    const coordinates: L.LatLngExpression[] = route.map((point) => [
+      point.latitude,
+      point.longitude,
+    ]);
+    map.current.fitBounds(L.latLngBounds(coordinates), {
+      padding: [35, 35],
+      maxZoom: 16,
+      animate: false,
+    });
+    hasFitRoute.current = true;
+  }, [route, fitRoute]);
+
   const recenter = () => {
     following.current = true;
     setIsFollowing(true);
@@ -242,13 +267,13 @@ export function VehicleMap({
         ref={container}
         className="vehicle-map__canvas"
         role="region"
-        aria-label="Live GPS map of the simulated vehicle in San Francisco"
+        aria-label={mapLabel}
       />
       <div className="vehicle-map__status">
         <span
           className={`map-status-dot ${available ? "" : "map-status-dot--gray"}`}
         />
-        {available ? "GPS connected" : "GPS unavailable"}
+        {available ? gpsStatusLabel : "GPS unavailable"}
       </div>
       <div className="vehicle-map__controls" aria-label="Map controls">
         <div className="map-zoom-buttons">

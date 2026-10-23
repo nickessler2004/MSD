@@ -1,103 +1,109 @@
 # MSD Impact Monitor
 
-A working React + TypeScript prototype for monitoring vehicle motion and threshold events. The **Live simulation** and **Event-only preview** modes are explicitly separated. Continuous GPS and IMU values are simulated; locally injected threshold packets are labeled test events. No physical hardware, phone gateway, account, API key, or cloud database is connected or required.
+A React + TypeScript observer dashboard for vehicle GPS and threshold events. Stage 2 adds authenticated Supabase storage, shared real-time observation, three-IMU threshold configuration, and persistent cloud session history. The local demonstrations still run without Supabase configuration.
 
-![MSD Impact Monitor dashboard with simulated GPS, acceleration, and impact history](docs/dashboard.png)
+![MSD cloud observer with simulated cloud test records](docs/cloud-preview.png)
+
+The cloud preview uses simulated test records. Configure your own Supabase project using the steps below to connect a hosted database.
 
 ## Run locally
 
-Use **Node.js 22.12+** (Node 24 recommended) and npm.
+Use **Node.js 22.12+** (Node 24 recommended) and npm:
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser. To preview the production bundle:
+Open the address Vite prints, normally `http://localhost:5173`. To preview the production bundle:
 
 ```sh
 npm run build
 npm run preview
 ```
 
-Vite prints the preview address (normally `http://localhost:4173`). The development and preview servers bind to all interfaces for use in a development container; they are development tools, not a production deployment.
+The preview address is normally `http://localhost:4173`. Vite's development and preview servers bind to all interfaces for development-container use; they are not a production deployment.
 
-## Choose a telemetry mode
+## Choose a telemetry source
 
-Use the **Telemetry source** selector at the top of the dashboard:
+Use **Telemetry source** to switch between:
 
-- **Live simulation** retains the moving-vehicle demonstration, three continuously updated acceleration axes, and automatic/injected impact pulses. Every continuous value is labeled simulated.
-- **Event-only preview** prepares the UI for the ESP32-S3’s threshold-event protocol. No device is connected. Continuous acceleration, live GPS, route, speed, and distance are unavailable; the dashboard does not fill them with simulated values or zeros. **Inject test event** delivers a local sparse threshold packet through the event adapter. Its provenance remains **Test event**, never **Device event**.
+| Source                 | What it displays                                                                                                                         | Persistence                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Live simulation**    | Moving demo vehicle, signed X/Y/Z acceleration axes, automatic/injected impacts, adjustable local thresholds                             | In memory; resets on refresh                                      |
+| **Event-only preview** | Sparse local test events; no device connection or fabricated continuous values                                                           | In memory; resets on refresh                                      |
+| **Supabase cloud**     | Authenticated cloud sessions, live geographic GPS route, event locations, connection freshness, and threshold-event history for IMUs 1–3 | Database; survives visits and is shared with authorized observers |
 
-Event-only packets may omit peak magnitude and GPS. The event table displays **Not supplied** instead of generating either value. Session distance is **Not available** when no continuous position stream exists. The two modes keep separate in-memory histories, so simulation records cannot appear as real-device records after changing modes.
+Cloud mode never falls back to demo values while claiming to show a real device. Sessions carry immutable **simulated** or **device** provenance. The optional cloud test drive uploads simulated GPS/events through the normal authenticated database path only into simulated sessions. No phone application, ESP32-S3 firmware, or physical sensor connection is included.
 
-![Event-only preview showing unknown current motion and a sparse test event](docs/event-only.png)
+## Enable Supabase cloud
 
-## Try the dashboard
+Follow the complete [Supabase setup guide](docs/SUPABASE_SETUP.md). The required steps are:
 
-- **Live GPS (simulation only):** a demo vehicle travels a closed San Francisco route at 32 km/h. The map follows it; drag to explore, use +/− to zoom, and use the target button to resume following. Impact markers include event timestamps and coordinates when those values are supplied.
-- **IMU indicators (simulation only):** view signed X (longitudinal), Y (lateral), and Z (vertical) acceleration in g, with the latest 24 seconds plotted. Values represent linear acceleration with gravity removed. These are not ESP32-S3 readings.
-- **Traffic light:** for fresh simulated resultant acceleration `A = sqrt(x² + y² + z²)`, green means **A < T1**, yellow means **T1 ≤ A ≤ T2**, and red means **A > T2**. Both exact threshold values are yellow. Gray means current motion is unknown or data is unavailable/stale.
-- **Demo thresholds:** open the threshold settings dialog. The prototype supports `0 < T1 < T2 ≤ 10 g`, defaulting to T1 = 0.8 g and T2 = 1.8 g. Changes apply only to the local live demonstration. They are not sent to a device and do not reclassify recorded events. These values are not calibrated safety limits.
-- **Impact simulation:** select **Simulate impact** in live simulation to inject a short pulse. Automatic warning and critical pulses also occur at alternating 30-second intervals. One continuous excursion produces one event; its peak magnitude, timestamp, GPS location, and highest observed severity update as the pulse evolves.
-- **Freshness:** availability, connection state, last-received time, and age are separate from impact severity. Live samples older than **5 seconds** are stale; their acceleration and GPS are hidden and the current traffic light becomes gray. Use **Pause updates** to exercise connected-but-stale behavior. Turning **Data feed** off disconnects immediately; reconnecting waits for a new sample instead of restoring an old green status.
-- **Event-only silence:** no threshold events does **not** mean the vehicle is below T1, healthy, or currently safe. A threshold packet describes a historical impact, not continuous motion. Event-only current status remains **unknown/gray**; the latest event is shown separately with its timestamp and provenance. A locally injected test event never establishes device connectivity. Event age is recency information, not a device heartbeat.
-- **Session history:** select **New session** to save the current session and begin another. Simulated drives retain measured distance, duration, impact count, and maximum magnitude. Event-only sessions retain event activity without inventing missing distance or acceleration.
-- **Impact history:** open **Impact events** and filter by severity. Event packets retain their reported severity; changing local demo thresholds does not reclassify them. An empty log or zero impacts is not a confirmed green state.
-- **Export:** **Export data** downloads a JSON snapshot containing the active mode, provenance, thresholds, sessions, and timestamped impact records. Unknown peak/GPS/distance values remain `null`.
+1. Create a Supabase project and apply [`supabase/migrations/20261021000100_msd_cloud.sql`](supabase/migrations/20261021000100_msd_cloud.sql) in its SQL Editor, or use an initialized/linked Supabase CLI and `supabase db push`.
+2. Enable email/password Auth, configure the frontend Site URL and allowed redirect URLs, and confirm user emails.
+3. Copy `.env.example` to `.env.local`, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to your project's **public** values, then restart Vite. A legacy public anon key is also supported.
+4. Select **Supabase cloud**, sign in, create a simulated cloud session, and start its cloud test drive. Observe from a second browser, or share the session with another registered, email-confirmed user's email.
 
-Live simulation starts with three explicitly simulated historical sessions and three impact events. Event-only preview starts empty. Active data, settings, and newly recorded history are held **in memory** and reset on refresh. Export JSON before refreshing to retain a copy. Times use the browser’s local timezone; exported timestamps are Unix milliseconds and export time is ISO 8601.
+No credentials are needed to build or run the tests. All `VITE_` values are public in browser bundles. **Never put a Supabase service-role/secret key, database password, or administrative access token in frontend configuration.** The public key plus the signed-in user's JWT and database RLS determine access.
 
-## Map and offline behavior
+Owners control session creation, uploads, threshold settings, completion, and sharing. Explicitly shared observers can only read. Unrelated and anonymous users cannot access session data. Realtime reconnect refreshes and periodic reconciliation recover missed changes and recheck access.
 
-The map uses Leaflet and public OpenStreetMap raster tiles, with visible attribution. Tile access is the only external browser request; fonts and application assets are bundled locally. In live simulation, if tile loading fails or the browser is offline, an **illustrated offline basemap** keeps GPS coordinates, the route, vehicle movement, and event markers usable. Event-only preview does not show a simulated live map. The illustration is approximate and is not a navigation map. OpenStreetMap tiles are subject to their [usage policy](https://operations.osmfoundation.org/policies/tiles/); choose an appropriate tile service before a production deployment.
+## Availability and impact semantics
+
+For known resultant acceleration `A = sqrt(x² + y² + z²)`, the rule is **green A < T1; yellow T1 ≤ A ≤ T2; red A > T2**. Both exact thresholds are yellow. Thresholds satisfy `0 < T1 < T2 ≤ 10 g`; default values are 0.8 g and 1.8 g. They are demonstration defaults, not calibrated safety limits.
+
+**Gray means unavailable, stale, or unknown.** In event-only/cloud mode, a threshold event describes a past impact, not continuous current acceleration. No events, fresh GPS, or a healthy gateway heartbeat do not establish a green IMU state. Cloud IMU cards show the latest reported event separately from unknown current motion, and never invent continuous X/Y/Z readings. Complete raw IMU data is intended to stay on the ESP32-S3.
+
+Cloud GPS freshness uses its source `recorded_at` time with a five-second limit; an old packet uploaded now is still historical. Gateway heartbeat freshness has a fifteen-second limit. The live map shows observed route coordinates and supplied event locations; stale GPS does not claim a live vehicle. Optional peak magnitude/GPS values remain `null` and display as **Not supplied**. Connection status to Supabase is separate from gateway status.
+
+Cloud GPS/events are immutable and use stable packet UUIDs and sequence numbers. Duplicate/conflicting identities are first-write wins. Delayed/out-of-order points are sorted by source time without moving the live marker backward; packets recorded within a finished session's original time bounds can still arrive later. See [Telemetry protocol](docs/TELEMETRY_PROTOCOL.md) for fields, RPC examples, clock bounds, retry rules, and future phone-gateway responsibilities.
+
+## Try the local demonstrations
+
+- **Live GPS and axes:** the local vehicle follows a San Francisco route at 32 km/h. Its three displayed axes are simulated linear acceleration with gravity removed, not ESP32-S3 telemetry.
+- **Impact controls:** select **Simulate impact** to inject a pulse. Automatic warning/critical pulses also alternate at thirty-second intervals. One continuous excursion becomes one peak event.
+- **Threshold settings:** local demo settings affect only the live demonstration. Cloud per-IMU settings persist separately and do not reclassify recorded events or prove firmware delivery.
+- **Freshness controls:** **Pause updates** demonstrates a connected but stale local stream; **Data feed** disconnects immediately. Missing/stale current readings and GPS are hidden and the status becomes gray. Reconnect waits for new samples.
+- **Event-only preview:** **Inject test event** creates a labeled sparse local packet. It never establishes a real device connection or infers green from silence.
+- **History/export:** local mode histories stay separate and reset on refresh. Export JSON before refreshing to retain them. Cloud sessions and events reload from Supabase between visits.
+
+![MSD Impact Monitor local simulation](docs/dashboard.png)
+
+![Local event-only preview with unknown motion and a sparse test event](docs/event-only.png)
+
+## Map behavior
+
+Leaflet uses public OpenStreetMap raster tiles with attribution. Fonts and application assets are bundled locally. When tiles are blocked or unavailable, an illustrated offline basemap still supports geographically placed route/vehicle/event data; it is approximate and is not a navigation map. Local event-only preview does not invent a live route. OpenStreetMap's [tile usage policy](https://operations.osmfoundation.org/policies/tiles/) applies; choose a suitable tile provider before production deployment.
 
 ## Validate
 
 ```sh
 npm run build        # TypeScript checks and optimized Vite build
-npm test             # Domain and telemetry unit tests
-npm run test:e2e     # Browser interaction and mobile checks
+npm test             # Domain, adapters, repository, and actual SQL/RLS migration tests
+npm run test:e2e     # Local and cloud browser workflows with controlled fixtures
 npm run format:check
 ```
 
-Browser tests use `/usr/bin/chromium` when available. Otherwise install Playwright’s browser once:
+Browser tests use `/usr/bin/chromium` when available. Otherwise install Playwright's browser once with `npx playwright install chromium`; on Linux, `npx playwright install --with-deps chromium` can also install required libraries. The browser runner starts its own isolated server and blocks external map tiles to exercise the fallback. GitHub Actions runs build, unit/database, and browser checks.
 
-```sh
-npx playwright install chromium
-npm run test:e2e
-```
-
-On Linux, `npx playwright install --with-deps chromium` can also install required system libraries. Browser tests start the app automatically on port 5173 and deliberately block external map tiles to exercise the offline fallback. GitHub Actions runs build, unit, and browser checks on pull requests and main-branch pushes.
+SQL tests execute the real migration in PostgreSQL via PGlite with **test-only** auth fixtures and roles. Cloud service/browser tests simulate Supabase HTTP and Realtime. They need no hosted-project credentials and do not claim to validate your project's email delivery, deployment, or network configuration. After configuring your own project, complete the [two-observer acceptance checklist](docs/SUPABASE_SETUP.md#4-test-two-observers-with-simulated-cloud-telemetry).
 
 ## Project structure
 
 ```text
 src/
-  components/          Map, acceleration chart, statistics, event/session tables, settings
-  data/demo.ts         Explicitly seeded demonstration history
-  domain/
-    types.ts           Normalized telemetry, event, threshold, and session models
-    monitoring.ts      Pure magnitude, classification, validation, and GPS distance logic
-    freshness.ts       Explicit waiting/fresh/stale/disconnected classification
-    *.test.ts          Domain and freshness tests
-  hooks/useMonitor.ts  Live state, event aggregation, sessions, and JSON export
-  lib/format.ts        Time and duration presentation
-  services/telemetry.ts
-                       Deterministic simulator and sparse event-only adapter
-  services/*.test.ts   Event-only packet/provenance and adapter cleanup tests
-  App.tsx              Dashboard layout and navigation
-  styles.css           Responsive theme
- tests/                Browser-level behavior and mobile layout checks
+  components/            Local/cloud dashboards, geographic map, auth, event/session views
+  domain/                Shared records, classification, freshness, deduplication, SQL tests
+  hooks/                 Local monitor, cloud auth, scoped/reconnecting cloud session state
+  services/
+    telemetry.ts         Local continuous simulator and sparse event-only adapter
+    supabase.ts          Public environment validation and lazy authenticated client
+    cloudRepository.ts   Paginated reads, authenticated RPCs, and Realtime subscriptions
+    cloudSimulator.ts    Owner-controlled simulated cloud GPS/events/heartbeat publisher
+supabase/migrations/     Versioned schema, constraints, RPCs, RLS, and Realtime publication
+ tests/                  Browser behavior, including credential-free cloud fixtures
+ docs/                   Supabase setup and future telemetry protocol
 ```
 
-## Later integration
-
-No cloud integration is started in this change. The existing boundaries are ready for later work:
-
-1. **ESP32-S3 → driver phone gateway:** use the event-first `TelemetryMessage` union to distinguish threshold-event packets from connection notifications. The ESP32-S3 will transmit threshold events, not continuous acceleration. A packet’s reported warning/critical severity is retained; optional peak magnitude and GPS stay `null` when absent. Continuous `sample` messages are typed as simulation data only. Implement a separate gateway adapter when hardware work begins, without making the simulator an implicit fallback.
-2. **Connection and freshness:** keep transport connectivity independent of event arrival. Sparse events do not establish a heartbeat, and event silence cannot confirm current normal acceleration. A future gateway must report connection state and any explicit heartbeat/freshness contract separately. A recent historical event must not be represented as a current sensor reading.
-3. **Persistence (later):** keep any future database calls in a service layer around the shared session and event models. Authentication, schema migrations, and row-level security are separate future work. No Supabase client, configuration, or database connection is added now.
-4. **Configuration:** no environment variables are needed today. Introduce documented public configuration only when an integration is added.
-
-No hardware connection, cloud database, real GPS collection, or authentication is implemented in this prototype.
+The cloud observer integration is implemented here; driver phone software, microcontroller firmware, raw-IMU cloud streaming, and production deployment are future work.
