@@ -115,6 +115,15 @@ beforeAll(async () => {
       "utf8",
     ),
   );
+  await db.exec(
+    readFileSync(
+      new URL(
+        "../../supabase/migrations/20261028000100_gps_accuracy.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
 }, 30_000);
 afterAll(async () => {
   await db?.close();
@@ -130,6 +139,25 @@ beforeEach(async () => {
 });
 
 describe("Supabase migration and RPC security in PostgreSQL", () => {
+  it("preserves GPS accuracy, accepts legacy packets and retains first-write retry semantics", async () => {
+    const session = await createSession();
+    const point = gps(session, 1, { accuracy_m: 4.25 });
+    await ingestGps(session.id, [point]);
+    await ingestGps(session.id, [{ ...point, accuracy_m: 99 }]);
+    await ingestGps(session.id, [gps(session, 2)]);
+    const result = await asUser(owner, () =>
+      db.query<{ accuracy_m: number | null }>(
+        "select accuracy_m from gps_points order by sequence",
+      ),
+    );
+    expect(result.rows).toEqual([{ accuracy_m: 4.25 }, { accuracy_m: null }]);
+    await expect(
+      ingestGps(session.id, [gps(session, 3, { accuracy_m: -1 })]),
+    ).rejects.toThrow();
+    await expect(
+      ingestGps(session.id, [gps(session, 3, { accuracy_m: "Infinity" })]),
+    ).rejects.toThrow();
+  });
   it("creates an owned session with exactly three IMUs and immutable provenance", async () => {
     const session = await createSession();
     const result = await asUser(owner, () =>

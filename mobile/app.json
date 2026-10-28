@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "MSD Gateway",
+    "slug": "msd-gateway",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "ios": {
+      "bundleIdentifier": "com.msd.phonegateway",
+      "infoPlist": {
+        "UIBackgroundModes": ["bluetooth-central", "location"]
+      }
+    },
+    "android": {
+      "package": "com.msd.phonegateway",
+      "permissions": [
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "MSD records your driving route during an active session, including while the screen is locked.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": true,
+          "modes": ["central"],
+          "bluetoothAlwaysPermission": "MSD connects to your helmet sensor during driving sessions."
+        }
+      ]
+    ],
+    "platforms": ["ios", "android"]
+  }
+}

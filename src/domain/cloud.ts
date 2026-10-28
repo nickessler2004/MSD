@@ -18,6 +18,8 @@ export interface GpsPoint {
   received_at: string;
   latitude: number;
   longitude: number;
+  /** OS horizontal accuracy in metres; absent for legacy publishers. */
+  accuracy_m?: number | null;
   speed_kph: number | null;
   heading: number | null;
 }
