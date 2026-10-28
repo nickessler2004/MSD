@@ -1,0 +1,17 @@
+# Database contract
+
+Apply `migrations/20261021000100_msd_cloud.sql` once in a Supabase project's SQL editor, or with `supabase db push` after linking the CLI. The project must have its standard `auth.users`, `auth.uid()`, `anon`, and `authenticated` objects. No seed creates real accounts or bypasses authentication.
+
+All six tables enable row-level security. Authenticated owners and explicitly shared observers can read a session's records. Observers cannot mutate data. Owners write through narrow, authenticated RPCs; direct table INSERT/UPDATE/DELETE is denied, including changing session ownership or provenance. Sharing requires an already registered, email-confirmed observer. Only the owner can grant or revoke access.
+
+The authenticated RPC routes are `create_driving_session`, `finish_driving_session`, `ingest_gps`, `ingest_threshold_events`, `ingest_connection`, `set_imu_thresholds`, `share_session`, and `revoke_session_observer`. Helpers used internally are not exposed to authenticated callers except the boolean read-policy helper.
+
+Each GPS/event packet supplies a client UUID, session-scoped monotonic `sequence`, source `recorded_at`, and its sensor fields. Connection packets are append-only with session/sequence identity. Retries and conflicting duplicate IDs/sequences use **first-write wins** and cannot replace a previously accepted row. Sequence allocation must survive uploader retries/restarts within a session. Upload batches are atomic and limited to 100 GPS/event records. Query historical GPS by source time, with sequence as a stable tie-breaker; query latest connection by highest sequence. Delivery order and `received_at` must never determine the live vehicle position.
+
+A source timestamp must be finite, on/after session start, at most 60 seconds into the future, and on/before a closed session's end. Delayed upload after closing is allowed for packets recorded during that session. Owner session-row locks serialize ingestion, configuration, and closing. Closing preserves the latest already accepted source timestamp if it was within the permitted +60s clock tolerance. All receipt times are assigned by PostgreSQL. Current freshness must be judged using source time (plus explicit connection state), so a newly received old packet does not look live.
+
+Exactly three IMUs (IDs 1, 2, 3) have configurable `0 < T1 < T2 ≤ 10 g` thresholds. Every threshold event snapshots T1/T2. An optional peak must agree with `T1 ≤ A ≤ T2` for warning or `A > T2` for critical. GPS and peak values may remain null. Threshold settings do not retroactively reclassify events and are cloud configuration, not proof of firmware configuration delivery. No raw continuous IMU table exists.
+
+The migration registers the five session/telemetry/configuration tables in `supabase_realtime`. Membership is deliberately not published because Supabase DELETE notifications cannot enforce row policies and could expose its `(session_id, user_id)` key. Realtime uses the authenticated user's SELECT policies. In addition to change subscriptions, observers must refetch on reconnect and periodically recheck access. In particular, revoking membership cannot remove data that a browser already downloaded, but subsequent authorized queries must return no session data.
+
+`src/domain/database.test.ts` executes this exact migration with PostgreSQL in PGlite. Its auth schema/user fixtures and role impersonation exist only in the test and are never deployed.
