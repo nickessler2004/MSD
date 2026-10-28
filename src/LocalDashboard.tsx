@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Activity,
   ArrowDownToLine,
@@ -34,7 +34,8 @@ import { SessionTable } from "./components/SessionTable";
 import { ThresholdDialog } from "./components/ThresholdDialog";
 import { time, date, duration } from "./lib/format";
 import { VehicleMap } from "./components/VehicleMap";
-import { ROUTE_COORDINATES } from "./services/telemetry";
+import { EventAnalysis } from "./components/EventAnalysis";
+import type { AnalysisEvent } from "./domain/eventAnalysis";
 import { TelemetryAvailability } from "./components/TelemetryAvailability";
 import type { TelemetryMode } from "./domain/types";
 import { useMonitor } from "./hooks/useMonitor";
@@ -56,7 +57,8 @@ export default function LocalDashboard({
   const monitor = useMonitor(initialMode);
   const [page, setPage] = useState<Page>("overview");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [eventFilter, setEventFilter] = useState("all");
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [reviewSessionId, setReviewSessionId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const {
     available,
@@ -96,8 +98,45 @@ export default function LocalDashboard({
       "Current motion is unconfirmed. Fresh data is required before a green assessment.",
   };
   const currentEvents = events.filter((e) => e.sessionId === session.id);
-  const filteredEvents = events.filter(
-    (e) => eventFilter === "all" || e.severity === eventFilter,
+  const analysisEvents = useMemo<AnalysisEvent[]>(
+    () =>
+      events.map((e) => ({
+        id: e.id,
+        timestamp: e.timestamp,
+        imuId: null,
+        severity: e.severity,
+        magnitude: e.magnitude,
+        position: e.position,
+        thresholds: null,
+        source:
+          e.source === "simulation"
+            ? "Simulated"
+            : e.source === "test-event"
+              ? "Test event"
+              : "Device event",
+      })),
+    [events],
+  );
+  const reviewSession = [session, ...sessions].find(
+    (s) => s.id === reviewSessionId,
+  );
+  const analysisMap = (
+    items: AnalysisEvent[],
+    route = monitor.routes[session.id] ?? [],
+  ) => (
+    <VehicleMap
+      position={null}
+      heading={0}
+      route={route}
+      events={items.flatMap((e) =>
+        e.position ? [{ ...e, position: e.position }] : [],
+      )}
+      available={false}
+      fitRoute
+      selectedEventId={selectedEventId}
+      onEventSelect={setSelectedEventId}
+      mapLabel="Recorded demo event locations"
+    />
   );
 
   return (
@@ -110,7 +149,7 @@ export default function LocalDashboard({
             e.preventDefault();
             setPage("overview");
           }}
-          aria-label="MSD Impact Monitor home"
+          aria-label="MSD Observer home"
         >
           <span className="brand-mark">
             <Activity size={25} strokeWidth={2.4} />
@@ -119,7 +158,7 @@ export default function LocalDashboard({
             <strong>
               MSD<span className="brand-dot">.</span>
             </strong>
-            <small>IMPACT MONITOR</small>
+            <small>OBSERVER</small>
           </span>
         </a>
         <div className="workspace">
@@ -127,8 +166,8 @@ export default function LocalDashboard({
             <Navigation size={16} />
           </span>
           <div>
-            <strong>Demo workspace</strong>
-            <span>Vehicle monitoring</span>
+            <strong>Local workspace</strong>
+            <span>Simulated telemetry</span>
           </div>
           <ChevronDown size={14} />
         </div>
@@ -173,10 +212,10 @@ export default function LocalDashboard({
             <span className="simulation-note-icon">
               <Sparkles size={18} />
             </span>
-            <strong>A safe space to explore.</strong>
+            <strong>Local demonstration</strong>
             <p>
-              Choose a live simulation or a sparse event-only preview. No device
-              is connected.
+              Simulated motion and test events only. No physical device is
+              connected.
             </p>
             <span>
               <i />
@@ -234,14 +273,12 @@ export default function LocalDashboard({
             <div className="heading-main">
               <div>
                 <h1>
-                  {page === "overview"
-                    ? "Every journey, in focus."
-                    : pageNames[page]}
+                  {page === "overview" ? "Observer dashboard" : pageNames[page]}
                 </h1>
                 <p>
                   {page === "overview"
                     ? isDemo
-                      ? "Real-time motion. Meaningful insights. A safer road ahead."
+                      ? "A clear view of every drive. GPS, reported impacts, and session context."
                       : "Threshold events with clear availability and source context."
                     : page === "events"
                       ? "A closer look at the moments that matter on the road."
@@ -363,7 +400,12 @@ export default function LocalDashboard({
                           ...event,
                           position: event.position!,
                         }))}
-                      route={ROUTE_COORDINATES}
+                      route={monitor.routes[session.id] ?? []}
+                      selectedEventId={selectedEventId}
+                      onEventSelect={(id) => {
+                        setSelectedEventId(id);
+                        setPage("events");
+                      }}
                       available={available}
                     />
                   ) : (
@@ -539,6 +581,30 @@ export default function LocalDashboard({
                   )}
                 </section>
               </div>
+              <section
+                className="local-imu-statuses"
+                aria-label="Three IMU availability cards"
+              >
+                {[1, 2, 3].map((id) => (
+                  <article
+                    className="card local-imu-availability"
+                    aria-label={`IMU ${id} availability`}
+                    key={id}
+                  >
+                    <div>
+                      <strong>IMU {id}</strong>
+                      <span className="cloud-unknown">
+                        <i />
+                        Current: Unavailable
+                      </span>
+                    </div>
+                    <p>
+                      Per-IMU measurements are not supplied by this local demo.
+                    </p>
+                    <span>Last per-IMU event: Not supplied</span>
+                  </article>
+                ))}
+              </section>
               <section className="card imu-card">
                 <div className="card-heading">
                   <div>
@@ -689,33 +755,14 @@ export default function LocalDashboard({
             </>
           )}
           {page === "events" && (
-            <section className="card full-table-card">
-              <div className="card-heading">
-                <div>
-                  <h2>
-                    <Zap size={18} />
-                    Impact event log
-                    <span className="count-badge">{filteredEvents.length}</span>
-                  </h2>
-                  <p>
-                    Events retain the severity recorded at the time of impact.
-                  </p>
-                </div>
-                <label className="filter-select">
-                  <SlidersHorizontal size={14} />
-                  <select
-                    aria-label="Filter impact events"
-                    value={eventFilter}
-                    onChange={(e) => setEventFilter(e.target.value)}
-                  >
-                    <option value="all">All severities</option>
-                    <option value="warning">Moderate</option>
-                    <option value="critical">High impact</option>
-                  </select>
-                </label>
-              </div>
-              <EventTable events={filteredEvents} />
-            </section>
+            <EventAnalysis
+              key={mode}
+              events={analysisEvents}
+              now={now}
+              selectedId={selectedEventId}
+              onSelect={setSelectedEventId}
+              map={analysisMap(analysisEvents)}
+            />
           )}
           {page === "sessions" && (
             <section className="card full-table-card">
@@ -734,7 +781,64 @@ export default function LocalDashboard({
                   {sessions.length + 1} SESSIONS
                 </span>
               </div>
-              <SessionTable sessions={[session, ...sessions]} now={now} />
+              <SessionTable
+                sessions={[session, ...sessions]}
+                now={now}
+                onReview={(id) => {
+                  setReviewSessionId(id);
+                  setSelectedEventId(null);
+                }}
+              />
+              {reviewSession && (
+                <div className="local-session-review">
+                  <div className="card-heading">
+                    <div>
+                      <h2>Review · {date(reviewSession.startedAt)}</h2>
+                      <p>
+                        {reviewSession.source === "simulation"
+                          ? "Simulated session"
+                          : "Event-only session"}{" "}
+                        ·{" "}
+                        {duration(
+                          (reviewSession.endedAt ?? now) -
+                            reviewSession.startedAt,
+                        )}{" "}
+                        · {reviewSession.impactCount} recorded events
+                      </p>
+                      <p>
+                        {monitor.routes[reviewSession.id]?.length
+                          ? `${monitor.routes[reviewSession.id].length} captured demo positions`
+                          : "GPS route not retained for this session · Event locations shown only where supplied"}
+                      </p>
+                    </div>
+                    <button
+                      className="button secondary"
+                      onClick={() => setReviewSessionId(null)}
+                    >
+                      Close review
+                    </button>
+                  </div>
+                  <EventAnalysis
+                    key={reviewSession.id}
+                    events={analysisEvents.filter(
+                      (e) =>
+                        events.find((original) => original.id === e.id)
+                          ?.sessionId === reviewSession.id,
+                    )}
+                    now={now}
+                    selectedId={selectedEventId}
+                    onSelect={setSelectedEventId}
+                    map={analysisMap(
+                      analysisEvents.filter(
+                        (e) =>
+                          events.find((original) => original.id === e.id)
+                            ?.sessionId === reviewSession.id,
+                      ),
+                      monitor.routes[reviewSession.id] ?? [],
+                    )}
+                  />
+                </div>
+              )}
             </section>
           )}
           <section
@@ -749,7 +853,7 @@ export default function LocalDashboard({
               </span>
               <div>
                 <strong>
-                  {isDemo ? "Your virtual test drive" : "Sparse event preview"}
+                  {isDemo ? "Simulation controls" : "Sparse event preview"}
                 </strong>
                 <span>
                   {isDemo
@@ -823,8 +927,8 @@ export default function LocalDashboard({
               Simulation and test events only. No hardware or cloud connection.
             </span>
             <span>
-              MSD Impact Monitor <span className="muted-dot">/</span> Prototype
-              0.1
+              MSD Impact Monitor <span className="muted-dot">/</span> Observer /
+              Demonstration
             </span>
           </footer>
         </main>

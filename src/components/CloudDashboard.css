@@ -1,6 +1,6 @@
 .cloud-shell {
   min-height: 100vh;
-  background: #f6f7f4;
+  background: #121c2a;
 }
 .cloud-topbar {
   display: flex;
@@ -8,7 +8,7 @@
   justify-content: space-between;
   gap: 20px;
   min-height: 82px;
-  background: #fffefa;
+  background: #121c2a;
   border-bottom: 1px solid var(--border);
   padding: 18px max(28px, calc((100vw - 1390px) / 2));
 }
@@ -21,15 +21,15 @@
   font-family: var(--heading);
   font-size: 29px;
   letter-spacing: -1.5px;
-  color: #2b4937;
+  color: #e5edf8;
 }
 .cloud-brand > strong > span {
-  color: #7b9e67;
+  color: #a4b3c6;
 }
 .cloud-brand-label {
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 1.5px;
-  color: #8d9b7d;
+  color: #a4b3c6;
   margin-left: 6px;
 }
 .cloud-top-actions {
@@ -41,20 +41,20 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 10px;
-  color: #829174;
+  font-size: 11px;
+  color: #a4b3c6;
 }
 .cloud-source-label select,
 .cloud-session-choice select,
 .cloud-create select,
 .cloud-create input,
 .cloud-sharing input {
-  background: #f8faf3;
-  border: 1px solid #dfe6d7;
+  background: #121c2a;
+  border: 1px solid #2a394d;
   border-radius: 6px;
   padding: 9px 11px;
   font-size: 11px;
-  color: #526a40;
+  color: #e5edf8;
   max-width: 100%;
 }
 .cloud-main {
@@ -75,7 +75,7 @@
 }
 .cloud-page-heading p {
   font-size: 12px;
-  color: #829372;
+  color: #a4b3c6;
   margin: 0;
   line-height: 1.8;
 }
@@ -83,8 +83,8 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 10px;
-  color: #8b9b79;
+  font-size: 11px;
+  color: #a4b3c6;
   overflow-wrap: anywhere;
 }
 .cloud-setup,
@@ -94,13 +94,13 @@
   align-items: flex-start;
   flex-direction: column;
   gap: 15px;
-  color: #8d9d79;
+  color: #a4b3c6;
 }
 .cloud-setup h2,
 .cloud-empty h2 {
   font: 600 23px var(--heading);
   letter-spacing: -0.6px;
-  color: #4d6840;
+  color: #e5edf8;
   margin: 0;
 }
 .cloud-setup p,
@@ -109,18 +109,18 @@
   line-height: 1.9;
   max-width: 850px;
   margin: 0;
-  color: #7f906d;
+  color: #a4b3c6;
 }
 .cloud-setup ol {
   font-size: 12px;
   line-height: 2.3;
   margin: 0;
   padding-left: 18px;
-  color: #7b8e67;
+  color: #a4b3c6;
 }
 .cloud-setup code {
   font-size: 11px;
-  background: #f0f4e7;
+  background: #121c2a;
   padding: 2px 5px;
   border-radius: 4px;
 }
@@ -140,9 +140,9 @@
   flex: 1;
 }
 .cloud-session-choice label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 550;
-  color: #7b8f66;
+  color: #a4b3c6;
 }
 .cloud-session-choice select {
   width: 100%;
@@ -162,9 +162,9 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  color: #64874c;
-  border: 1px solid #dce8ce;
-  background: #f1f6e8;
+  color: #a4b3c6;
+  border: 1px solid #2a394d;
+  background: #121c2a;
   font-size: 11px;
   line-height: 1.8;
   border-radius: 7px;
@@ -176,40 +176,40 @@
   flex-shrink: 0;
 }
 .cloud-error {
-  background: #fcf4ed;
-  color: #b27b5c;
-  border-color: #f0dfd0;
+  background: #121c2a;
+  color: #f2bb60;
+  border-color: #2a394d;
 }
 .cloud-tabs {
   display: flex;
   gap: 7px;
   align-items: center;
   flex-wrap: wrap;
-  border-bottom: 1px solid #e3e8da;
+  border-bottom: 1px solid #2a394d;
   margin: 10px 0 24px;
   padding: 0 0 11px;
 }
 .cloud-tabs > button {
   border: 0;
   background: none;
-  color: #8d9d7c;
+  color: #a4b3c6;
   font-size: 11px;
   padding: 8px 13px;
   border-radius: 6px;
   text-transform: capitalize;
 }
 .cloud-tabs > button.active {
-  color: #5e8049;
-  background: #eaf1e1;
+  color: #a4b3c6;
+  background: #121c2a;
   font-weight: 600;
 }
 .cloud-tabs > button:hover {
-  background: #f0f4e9;
+  background: #121c2a;
 }
 .cloud-sync {
   margin-left: auto;
-  font-size: 9px;
-  color: #a0a98f;
+  font-size: 11px;
+  color: #a4b3c6;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -218,13 +218,13 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #a9b09d;
+  background: #182536;
 }
 .cloud-sync-subscribed {
-  color: #839c6c;
+  color: #a4b3c6;
 }
 .cloud-sync-subscribed i {
-  background: #8ea973;
+  background: #244b74;
 }
 .cloud-session-caption {
   display: flex;
@@ -242,26 +242,26 @@
 .cloud-session-caption h2 {
   font: 600 20px var(--heading);
   letter-spacing: -0.5px;
-  color: #49613d;
+  color: #e5edf8;
   margin: 0;
 }
 .cloud-session-caption > div > span {
-  font-size: 10px;
-  color: #8a9a77;
+  font-size: 11px;
+  color: #a4b3c6;
 }
 .cloud-source-chip {
-  font-size: 7px !important;
+  font-size: 11px !important;
   letter-spacing: 0.7px;
-  border: 1px solid #e2e9d8;
+  border: 1px solid #2a394d;
   padding: 5px 8px;
   border-radius: 5px;
-  background: #f1f5e9;
-  color: #8b9f70 !important;
+  background: #121c2a;
+  color: #a4b3c6 !important;
 }
 .cloud-source-chip.device {
-  background: #edf2f0;
-  color: #7c9789 !important;
-  border-color: #dfe8e1;
+  background: #121c2a;
+  color: #a4b3c6 !important;
+  border-color: #2a394d;
 }
 .cloud-stats .stat-value {
   font-size: 25px;
@@ -281,8 +281,8 @@
   height: 360px;
 }
 .cloud-gps-times {
-  font-size: 9px;
-  color: #9aa68b;
+  font-size: 11px;
+  color: #a4b3c6;
   line-height: 1.8;
   padding: 0 20px 15px;
   margin: 0;
@@ -306,15 +306,15 @@
   place-items: center;
   width: 25px;
   height: 25px;
-  font-size: 10px;
-  color: #8b9c78;
-  background: #f0f4e8;
-  border: 1px solid #e8eedf;
+  font-size: 11px;
+  color: #a4b3c6;
+  background: #121c2a;
+  border: 1px solid #2a394d;
   border-radius: 7px;
 }
 .cloud-imu-title h2 {
   font-size: 13px;
-  color: #677e54;
+  color: #a4b3c6;
   margin: 0;
   font-weight: 600;
 }
@@ -322,8 +322,8 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 9px;
-  color: #9da491;
+  font-size: 11px;
+  color: #a4b3c6;
   margin-left: auto;
   white-space: nowrap;
 }
@@ -331,12 +331,12 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #aeb4a6;
+  background: #182536;
   box-shadow: 0 0 0 3px #f1f2ed;
 }
 .cloud-imu-card > p {
-  font-size: 9px;
-  color: #9da88c;
+  font-size: 11px;
+  color: #a4b3c6;
   line-height: 1.8;
   margin: 9px 0 11px;
 }
@@ -345,23 +345,23 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  color: #98a584;
-  font-size: 8px;
+  color: #a4b3c6;
+  font-size: 11px;
   min-height: 22px;
 }
 .cloud-last-event .severity-badge {
-  font-size: 8px;
+  font-size: 11px;
 }
 .cloud-imu-card footer {
-  border-top: 1px dashed #e7ecdc;
+  border-top: 1px dashed #2a394d;
   margin-top: 12px;
   padding-top: 10px;
-  font-size: 9px;
-  color: #9da98d;
+  font-size: 11px;
+  color: #a4b3c6;
 }
 .cloud-imu-card footer span {
   margin: 0 8px;
-  color: #b3bca7;
+  color: #a4b3c6;
 }
 .cloud-recent {
   margin-bottom: 22px;
@@ -371,35 +371,35 @@
 }
 .cloud-events-table td {
   padding: 15px;
-  font-size: 10px;
-  color: #7f926a;
+  font-size: 11px;
+  color: #a4b3c6;
 }
 .cloud-events-table th {
   padding: 12px 15px;
-  font-size: 8px;
+  font-size: 11px;
 }
 .cloud-events-table strong,
 .cloud-history-table strong {
   font-size: 11px;
   font-weight: 500;
-  color: #738a5d;
+  color: #a4b3c6;
   font-variant-numeric: tabular-nums;
 }
 .cloud-events-table small,
 .cloud-history-table small {
   display: block;
-  font-size: 8px;
-  color: #a1ae8e;
+  font-size: 11px;
+  color: #a4b3c6;
   margin-top: 5px;
   line-height: 1.6;
 }
 .cloud-events-table .severity-badge {
-  font-size: 9px;
+  font-size: 11px;
 }
 .cloud-history-table td {
   font-size: 11px;
   padding: 17px 15px;
-  color: #8b9c76;
+  color: #a4b3c6;
 }
 .cloud-settings-grid {
   display: grid;
@@ -419,56 +419,56 @@
   display: flex;
   flex-direction: column;
   gap: 9px;
-  border: 1px solid #e7ecde;
-  background: #fafbf6;
+  border: 1px solid #2a394d;
+  background: #121c2a;
   padding: 13px;
   border-radius: 7px;
 }
 .cloud-threshold-rows strong {
   font-size: 11px;
   font-weight: 550;
-  color: #7b9067;
+  color: #a4b3c6;
   margin-bottom: 2px;
 }
 .cloud-threshold-rows label {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
-  color: #97a584;
+  font-size: 11px;
+  color: #a4b3c6;
 }
 .cloud-threshold-rows input {
   width: 100%;
   min-width: 0;
-  border: 1px solid #e0e7d5;
-  background: #fffefa;
-  color: #79935f;
+  border: 1px solid #2a394d;
+  background: #121c2a;
+  color: #a4b3c6;
   font-size: 11px;
   padding: 7px;
   border-radius: 5px;
   font-variant-numeric: tabular-nums;
 }
 .cloud-threshold-rows input:disabled {
-  background: #f1f3ec;
-  color: #9aa58b;
+  background: #121c2a;
+  color: #a4b3c6;
 }
 .cloud-settings-note {
-  font-size: 10px;
-  color: #98a789;
+  font-size: 11px;
+  color: #a4b3c6;
   line-height: 1.9;
   margin: 14px 0;
 }
 .cloud-form-error {
-  font-size: 10px;
-  color: #b78262;
+  font-size: 11px;
+  color: #f2bb60;
   line-height: 1.7;
 }
 .cloud-sharing form {
   padding: 0 20px;
 }
 .cloud-sharing form > label {
-  font-size: 10px;
-  color: #82986c;
+  font-size: 11px;
+  color: #a4b3c6;
   display: block;
   margin-bottom: 8px;
 }
@@ -483,7 +483,7 @@
 }
 .cloud-sharing > .cloud-settings-note {
   padding: 0 20px 5px;
-  font-size: 9px;
+  font-size: 11px;
 }
 .cloud-observer-list {
   padding: 0 20px;
@@ -494,17 +494,17 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border-bottom: 1px solid #edf0e5;
+  border-bottom: 1px solid #2a394d;
   padding: 9px 0;
 }
 .cloud-observer-list li > span {
-  font-size: 8px;
+  font-size: 11px;
   overflow-wrap: anywhere;
-  color: #98a886;
+  color: #a4b3c6;
   flex: 1;
 }
 .cloud-observer-list button {
-  font-size: 8px;
+  font-size: 11px;
   white-space: nowrap;
 }
 .cloud-readonly {
@@ -515,31 +515,31 @@
   gap: 11px;
   padding: 15px 30px 30px;
   text-align: center;
-  color: #94a57f;
+  color: #a4b3c6;
 }
 .cloud-readonly strong {
   font-size: 13px;
   font-weight: 550;
-  color: #7c9167;
+  color: #a4b3c6;
 }
 .cloud-readonly p {
   font-size: 11px;
   line-height: 1.9;
   margin: 0;
-  color: #99a98b;
+  color: #a4b3c6;
 }
 .cloud-test-controls {
   margin-top: 0;
 }
 .cloud-test-controls .demo-controls-title div > span {
-  font-size: 10px;
+  font-size: 11px;
 }
 .cloud-footer {
   display: flex;
   justify-content: space-between;
   gap: 15px;
-  font-size: 9px;
-  color: #a4ae95;
+  font-size: 11px;
+  color: #a4b3c6;
   line-height: 1.8;
   padding: 23px 0 0;
 }
@@ -583,7 +583,7 @@
     padding: 10px;
   }
   .cloud-unknown {
-    font-size: 8px;
+    font-size: 11px;
   }
   .cloud-imu-card {
     padding: 15px;
@@ -606,7 +606,7 @@
     gap: 0;
   }
   .cloud-source-label select {
-    font-size: 10px;
+    font-size: 11px;
     padding: 8px;
     max-width: 145px;
   }
@@ -614,7 +614,7 @@
     gap: 9px;
   }
   .cloud-top-actions .button {
-    font-size: 9px;
+    font-size: 11px;
     padding: 8px;
     min-height: 30px;
   }
@@ -633,7 +633,7 @@
     font-size: 11px;
   }
   .cloud-user {
-    font-size: 9px;
+    font-size: 11px;
   }
   .cloud-session-toolbar {
     padding: 16px;
@@ -654,7 +654,7 @@
     flex: 1;
   }
   .cloud-create .button {
-    font-size: 9px;
+    font-size: 11px;
   }
   .cloud-sync {
     width: 100%;
@@ -665,7 +665,7 @@
     margin-bottom: 20px;
   }
   .cloud-tabs > button {
-    font-size: 10px;
+    font-size: 11px;
     padding: 7px 10px;
   }
   .cloud-stats {
@@ -692,22 +692,22 @@
   .cloud-imu-number {
     width: 20px;
     height: 20px;
-    font-size: 8px;
+    font-size: 11px;
   }
   .cloud-unknown {
     margin-left: 0;
     width: 100%;
     margin-top: 7px;
-    font-size: 8px;
+    font-size: 11px;
   }
   .cloud-imu-card > p {
-    font-size: 8px;
+    font-size: 11px;
   }
   .cloud-last-event {
-    font-size: 7px;
+    font-size: 11px;
   }
   .cloud-imu-card footer {
-    font-size: 8px;
+    font-size: 11px;
   }
   .cloud-imu-card footer span {
     margin: 0 3px;
@@ -725,26 +725,26 @@
     gap: 8px;
   }
   .cloud-session-caption > div > span {
-    font-size: 8px;
+    font-size: 11px;
   }
   .cloud-session-caption > .button {
-    font-size: 9px;
+    font-size: 11px;
     padding: 7px 9px;
   }
   .cloud-gps-times {
-    font-size: 8px;
+    font-size: 11px;
     padding-left: 15px;
     padding-right: 15px;
   }
   .cloud-settings-note {
-    font-size: 9px;
+    font-size: 11px;
   }
   .cloud-settings-grid {
     gap: 18px;
   }
   .cloud-footer {
     flex-direction: column;
-    font-size: 8px;
+    font-size: 11px;
   }
   .cloud-footer > span:first-child {
     align-items: flex-start;
@@ -768,10 +768,10 @@
   }
   .cloud-setup code {
     overflow-wrap: anywhere;
-    font-size: 10px;
+    font-size: 11px;
   }
   .cloud-message {
-    font-size: 10px;
+    font-size: 11px;
   }
 }
 @media (max-width: 430px) {
@@ -787,7 +787,7 @@
   }
   .cloud-source-label select {
     max-width: 122px;
-    font-size: 9px;
+    font-size: 11px;
   }
   .cloud-top-actions .button {
     font-size: 0;
@@ -804,21 +804,21 @@
     font-size: 25px;
   }
   .cloud-page-heading p {
-    font-size: 10px;
+    font-size: 11px;
   }
   .cloud-session-toolbar {
     padding: 14px;
   }
   .cloud-session-toolbar > .button {
-    font-size: 9px;
+    font-size: 11px;
     padding: 8px;
   }
   .cloud-create select {
-    font-size: 10px;
+    font-size: 11px;
     min-width: 0;
   }
   .cloud-create .button {
-    font-size: 8px;
+    font-size: 11px;
     padding: 8px;
   }
   .cloud-session-caption {
@@ -828,7 +828,7 @@
     font-size: 22px;
   }
   .cloud-stats .stat-detail {
-    font-size: 8px;
+    font-size: 11px;
   }
   .cloud-imu-grid {
     grid-template-columns: 1fr;
@@ -843,16 +843,16 @@
     margin-left: auto;
     width: auto;
     margin-top: 0;
-    font-size: 9px;
+    font-size: 11px;
   }
   .cloud-imu-card > p {
-    font-size: 9px;
+    font-size: 11px;
   }
   .cloud-last-event {
-    font-size: 9px;
+    font-size: 11px;
   }
   .cloud-imu-card footer {
-    font-size: 9px;
+    font-size: 11px;
   }
   .cloud-threshold-rows {
     gap: 7px;
@@ -861,12 +861,12 @@
     padding: 9px 7px;
   }
   .cloud-threshold-rows label {
-    font-size: 9px;
+    font-size: 11px;
     gap: 4px;
   }
   .cloud-threshold-rows input {
     padding: 6px 3px;
-    font-size: 10px;
+    font-size: 11px;
   }
   .cloud-threshold-settings form {
     padding: 0 13px 17px;
@@ -881,10 +881,10 @@
     min-width: 155px;
   }
   .cloud-sharing .button {
-    font-size: 9px;
+    font-size: 11px;
   }
   .cloud-test-controls .demo-controls-title div > span {
-    font-size: 9px;
+    font-size: 11px;
     line-height: 1.7;
   }
   .cloud-test-controls .demo-controls-title {
@@ -894,14 +894,14 @@
     gap: 9px;
   }
   .cloud-test-controls .demo-actions .button {
-    font-size: 9px;
+    font-size: 11px;
     padding: 8px;
   }
   .cloud-events-table td {
-    font-size: 9px;
+    font-size: 11px;
   }
   .cloud-history-table td {
-    font-size: 10px;
+    font-size: 11px;
   }
   .cloud-map-card .vehicle-map {
     height: 290px;
