@@ -107,3 +107,7 @@ supabase/migrations/     Versioned schema, constraints, RPCs, RLS, and Realtime 
 ```
 
 The cloud observer integration is implemented here; driver phone software, microcontroller firmware, raw-IMU cloud streaming, and production deployment are future work.
+
+## Stage 3 phone gateway
+
+The iOS/Android React Native + TypeScript gateway is in [`mobile/`](mobile/README.md). It includes explicitly simulated BLE, a configurable hardware BLE adapter, phone GPS, authenticated Supabase uploads and a durable SQLite outbox. Apply the additive GPS accuracy migration before testing uploads. Physical Bluetooth, native builds and background execution still require Android/iPhone acceptance testing; no ESP32 firmware is included. See the mobile README for setup and the full test matrix.

@@ -5,3 +5,8 @@ test-results
 playwright-report
 
 .vite/
+
+work/
+mobile/.expo/
+mobile/android/
+mobile/ios/

@@ -9,3 +9,9 @@ test-results/
 .DS_Store
 
 .vite/
+
+mobile/.expo/
+mobile/android/
+mobile/ios/
+
+work/
