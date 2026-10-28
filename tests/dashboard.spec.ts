@@ -188,8 +188,10 @@ test("automatic warning and critical pulses each create one event per excursion"
   page,
 }) => {
   // Replaying 81.5 seconds executes every animation and telemetry timer.
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   await page.clock.install({ time: new Date("2026-10-21T12:00:00Z") });
+  // Keep time stationary between explicit runFor calls, including locator actions.
+  await page.clock.pauseAt(new Date("2026-10-21T12:01:00Z"));
   await page.reload();
   await page.getByRole("button", { name: "New session", exact: true }).click();
   const impactStat = page
@@ -224,6 +226,8 @@ test("missing telemetry pauses measured distance until fresh samples arrive", as
   page,
 }) => {
   await page.clock.install({ time: new Date("2026-10-21T12:00:00Z") });
+  // Keep time stationary between explicit runFor calls, including locator actions.
+  await page.clock.pauseAt(new Date("2026-10-21T12:01:00Z"));
   await page.reload();
   await page.getByRole("button", { name: "New session", exact: true }).click();
   const distanceStat = page

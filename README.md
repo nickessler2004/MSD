@@ -111,3 +111,5 @@ The cloud observer integration is implemented here; driver phone software, micro
 ## Stage 3 phone gateway
 
 The iOS/Android React Native + TypeScript gateway is in [`mobile/`](mobile/README.md). It includes explicitly simulated BLE, a configurable hardware BLE adapter, phone GPS, authenticated Supabase uploads and a durable SQLite outbox. Apply the additive GPS accuracy migration before testing uploads. Physical Bluetooth, native builds and background execution still require Android/iPhone acceptance testing; no ESP32 firmware is included. See the mobile README for setup and the full test matrix.
+
+The deployment target is now **iPhone**. Free software validation runs on Linux/Windows without Apple membership or a Mac; physical iPhone compatibility remains untested. See [the PR #3 validation report](docs/STAGE3_VALIDATION.md) for live Supabase evidence, dashboard checks, and the exact limits of iOS bundle export.
