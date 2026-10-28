@@ -12,6 +12,7 @@ import {
 } from "../domain/monitoring";
 import { getFreshness, TELEMETRY_STALE_AFTER_MS } from "../domain/freshness";
 import type {
+  Coordinates,
   DrivingSession,
   ImpactEvent,
   TelemetryMode,
@@ -57,6 +58,7 @@ export function useMonitor(initialMode: TelemetryMode = "simulation") {
     },
   }));
   const { session, sessions, events } = modeHistories[mode];
+  const [routes, setRoutes] = useState<Record<string, Coordinates[]>>({});
   const [sample, setSample] = useState<TelemetrySample | null>(null);
   const [history, setHistory] = useState<TelemetrySample[]>([]);
   const [lastReceivedAt, setLastReceivedAt] = useState<number | null>(null);
@@ -147,6 +149,13 @@ export function useMonitor(initialMode: TelemetryMode = "simulation") {
           : 0;
       previousSample.current = next;
       setSample(next);
+      setRoutes((old) => ({
+        ...old,
+        [currentSession.id]: [
+          ...(old[currentSession.id] ?? []),
+          { ...next.position },
+        ],
+      }));
       setLastReceivedAt(timestamp);
       setHistory((old) => [
         ...old.filter((item) => timestamp - item.timestamp < 24_000).slice(-47),
@@ -298,6 +307,7 @@ export function useMonitor(initialMode: TelemetryMode = "simulation") {
               currentMotionConfirmed: available,
             },
             sessions: [session, ...sessions],
+            routes,
             events,
           },
           null,
@@ -336,6 +346,7 @@ export function useMonitor(initialMode: TelemetryMode = "simulation") {
     events,
     sample,
     history,
+    routes,
     now,
     notice,
     simulateImpact,

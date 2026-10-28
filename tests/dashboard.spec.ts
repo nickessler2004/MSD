@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
   );
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Every journey, in focus." }),
+    page.getByRole("heading", { name: "Observer dashboard" }),
   ).toBeVisible();
 });
 
@@ -142,15 +142,15 @@ test("logs an injected impact with timestamp and GPS, and filters by recorded se
   const newest = rows.nth(1);
   await expect(newest).toContainText("High impact");
   await expect(newest).toContainText(/\d{2}:\d{2}:\d{2}/);
-  await expect(newest).toContainText(/37\.\d{4}, -122\.\d{4}/);
+  await expect(newest).toContainText(/37\.\d{5}, -122\.\d{5}/);
   await expect(newest).toContainText("Simulated");
   await page
-    .getByRole("combobox", { name: "Filter impact events" })
+    .getByRole("combobox", { name: "Filter by severity" })
     .selectOption("warning");
   await expect(rows).toHaveCount(3);
   await expect(page.getByRole("table")).not.toContainText("High impact");
   await page
-    .getByRole("combobox", { name: "Filter impact events" })
+    .getByRole("combobox", { name: "Filter by severity" })
     .selectOption("critical");
   await expect(rows).toHaveCount(3);
   await expect(page.getByRole("table")).not.toContainText("Moderate");
@@ -282,7 +282,7 @@ test("mobile layout fits a 390px screen and navigation and controls stay usable"
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
-    page.getByRole("heading", { name: "Every journey, in focus." }),
+    page.getByRole("heading", { name: "Observer dashboard" }),
   ).toBeVisible();
   const pageFits = () =>
     page.evaluate(
@@ -292,7 +292,7 @@ test("mobile layout fits a 390px screen and navigation and controls stay usable"
   const navigation = page.getByRole("navigation", { name: "Main navigation" });
   await navigation.getByRole("button", { name: /Impact events/ }).click();
   await expect(
-    page.getByRole("heading", { name: "Impact event log" }),
+    page.getByRole("heading", { name: "Event records" }),
   ).toBeVisible();
   expect(await pageFits()).toBe(true);
   await navigation
@@ -457,7 +457,7 @@ test("sparse test events retain historical severity without claiming device conn
   await expect(rows.nth(1)).toContainText("High impact");
   await expect(
     rows.nth(1).getByText("Not supplied", { exact: true }),
-  ).toHaveCount(2);
+  ).toHaveCount(4);
   await expect(rows.nth(2)).toContainText("Moderate");
 });
 

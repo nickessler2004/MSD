@@ -30,9 +30,7 @@ export function CloudAuth({ auth }: { auth: ReturnType<typeof useCloudAuth> }) {
         </span>
         <span className="heading-eyebrow">PRIVATE BY DEFAULT</span>
         <h2 id="cloud-auth-title">
-          {creating
-            ? "Create your cloud account."
-            : "Your journeys, securely connected."}
+          {creating ? "Create your cloud account." : "Sign in to observe."}
         </h2>
         <p>
           Sign in to view sessions you own or that another owner has shared with

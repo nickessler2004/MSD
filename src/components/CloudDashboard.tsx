@@ -4,7 +4,6 @@ import {
   ArrowDownToLine,
   Check,
   Cloud,
-  Clock3,
   Database,
   LogOut,
   MapPin,
@@ -38,7 +37,10 @@ import { useCloudSession } from "../hooks/useCloudSession";
 import { CloudAuth } from "./CloudAuth";
 import { Stat } from "./StatCard";
 import { VehicleMap } from "./VehicleMap";
-import { date, duration, time } from "../lib/format";
+import { date, time } from "../lib/format";
+import { EventAnalysis } from "./EventAnalysis";
+import { CloudSessionHistory } from "./CloudSessionHistory";
+import type { AnalysisEvent } from "../domain/eventAnalysis";
 import "./CloudDashboard.css";
 
 type Props = { onModeChange: (mode: TelemetryMode | "cloud") => void };
@@ -55,9 +57,13 @@ const message = (error: unknown) =>
 function CloudEvents({
   events,
   compact = false,
+  selectedId,
+  onSelect,
 }: {
   events: CloudThresholdEvent[];
   compact?: boolean;
+  selectedId?: string | null;
+  onSelect?: (id: string) => void;
 }) {
   const sorted = [...events].reverse();
   return (
@@ -74,9 +80,18 @@ function CloudEvents({
         </thead>
         <tbody>
           {(compact ? sorted.slice(0, 5) : sorted).map((event) => (
-            <tr key={event.id}>
+            <tr
+              key={event.id}
+              className={selectedId === event.id ? "selected-event" : ""}
+            >
               <td>
-                <strong>{time(Date.parse(event.recorded_at))}</strong>
+                <button
+                  className="event-select-button"
+                  onClick={() => onSelect?.(event.id)}
+                  aria-pressed={selectedId === event.id}
+                >
+                  <strong>{time(Date.parse(event.recorded_at))}</strong>
+                </button>
                 <small>
                   {date(Date.parse(event.recorded_at))} · IMU {event.imu_id}
                 </small>
@@ -128,6 +143,18 @@ export function CloudDashboard({ onModeChange }: Props) {
   const { snapshot, sessions, selectedId } = cloud;
   const [tab, setTab] = useState<"overview" | "history" | "events">("overview");
   const [now, setNow] = useState(Date.now());
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+  useEffect(() => setSelectedEventId(null), [selectedId]);
   const [label, setLabel] = useState("");
   const [dataSource, setDataSource] = useState<"simulated" | "device">(
     "simulated",
@@ -180,7 +207,7 @@ export function CloudDashboard({ onModeChange }: Props) {
     snapshot && auth.user?.id === snapshot.session.owner_id,
   );
   const active = Boolean(snapshot && !snapshot.session.ended_at);
-  const gpsLive = gpsState === "fresh" && active && !cloud.error;
+  const gpsLive = gpsState === "fresh" && active && !cloud.error && online;
   const route = useMemo(
     () =>
       gps.map((point) => ({
@@ -208,6 +235,44 @@ export function CloudDashboard({ onModeChange }: Props) {
       ),
     [events],
   );
+  const analysisEvents = useMemo<AnalysisEvent[]>(
+    () =>
+      events.map((event) => ({
+        id: event.id,
+        timestamp: Date.parse(event.recorded_at),
+        imuId: event.imu_id,
+        severity: event.severity,
+        magnitude: event.magnitude,
+        position:
+          event.latitude !== null && event.longitude !== null
+            ? { latitude: event.latitude, longitude: event.longitude }
+            : null,
+        thresholds: { t1: event.t1, t2: event.t2 },
+        source:
+          snapshot?.session.data_source === "simulated"
+            ? "Simulated cloud"
+            : "Device report",
+      })),
+    [events, snapshot?.session.data_source],
+  );
+  const renderReviewMap = (historical = false) => (
+    <VehicleMap
+      key={snapshot?.session.id}
+      position={
+        !historical && gpsLive && fix
+          ? { latitude: fix.latitude, longitude: fix.longitude }
+          : null
+      }
+      heading={fix?.heading ?? 0}
+      events={eventMarkers}
+      route={route}
+      available={!historical && gpsLive}
+      fitRoute
+      mapLabel="Recorded session route and event locations"
+      selectedEventId={selectedEventId}
+      onEventSelect={setSelectedEventId}
+    />
+  );
   const validThresholds = draftThresholds.every(
     (row) =>
       row.t1.trim() !== "" &&
@@ -230,6 +295,14 @@ export function CloudDashboard({ onModeChange }: Props) {
     } finally {
       setBusy(false);
     }
+  }
+  function showThresholds() {
+    setTab("overview");
+    window.setTimeout(() => {
+      const section = document.getElementById("cloud-threshold-settings");
+      section?.scrollIntoView({ behavior: "smooth", block: "start" });
+      section?.focus({ preventScroll: true });
+    }, 0);
   }
   function stopDrive() {
     feedStop.current?.();
@@ -303,7 +376,7 @@ export function CloudDashboard({ onModeChange }: Props) {
           <strong>
             MSD<span>.</span>
           </strong>
-          <span className="cloud-brand-label">IMPACT MONITOR</span>
+          <span className="cloud-brand-label">OBSERVER / TELEMETRY</span>
         </a>
         <div className="cloud-top-actions">
           <label className="cloud-source-label">
@@ -340,12 +413,12 @@ export function CloudDashboard({ onModeChange }: Props) {
           <div>
             <span className="heading-eyebrow">
               <Cloud size={12} />
-              STAGE 2 · CLOUD OBSERVATION
+              OBSERVER CONSOLE / CLOUD
             </span>
-            <h1>Cloud session monitor</h1>
+            <h1>Observer dashboard</h1>
             <p>
-              Live GPS. Historical threshold events. Shared, persistent session
-              records.
+              Track the drive. Inspect the impact. Review every recorded
+              session.
             </p>
           </div>
           {auth.user && (
@@ -479,6 +552,13 @@ export function CloudDashboard({ onModeChange }: Props) {
                 {notice}
               </div>
             )}
+            {!online && (
+              <div className="cloud-message cloud-error" role="status">
+                <WifiOff size={16} />
+                Browser offline · Live updates are unconfirmed. Reconnect, then
+                refresh records.
+              </div>
+            )}
             <nav className="cloud-tabs" aria-label="Cloud navigation">
               {(["overview", "history", "events"] as const).map((value) => (
                 <button
@@ -487,7 +567,13 @@ export function CloudDashboard({ onModeChange }: Props) {
                   className={tab === value ? "active" : ""}
                   onClick={() => setTab(value)}
                 >
-                  Cloud {value}
+                  {
+                    {
+                      overview: "Live overview",
+                      history: "Session history",
+                      events: "Event analysis",
+                    }[value]
+                  }
                 </button>
               ))}
               <span className={`cloud-sync cloud-sync-${cloud.realtimeStatus}`}>
@@ -500,77 +586,22 @@ export function CloudDashboard({ onModeChange }: Props) {
               </span>
             </nav>
             {tab === "history" ? (
-              <section className="card">
-                <div className="card-heading">
-                  <div>
-                    <h2>
-                      <Clock3 size={18} />
-                      Persistent session history
-                    </h2>
-                    <p>
-                      Owned and shared sessions, loaded from Supabase after
-                      every visit.
-                    </p>
-                  </div>
-                </div>
-                <div className="table-scroll">
-                  <table className="events-table cloud-history-table">
-                    <thead>
-                      <tr>
-                        <th>SESSION / SOURCE</th>
-                        <th>STARTED</th>
-                        <th>DURATION</th>
-                        <th>ACCESS</th>
-                        <th>STATE</th>
-                        <th />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sessions.map((session) => (
-                        <tr key={session.id}>
-                          <td>
-                            <strong>{session.label}</strong>
-                            <small>
-                              {session.data_source === "simulated"
-                                ? "Simulated cloud telemetry"
-                                : "Device telemetry"}
-                            </small>
-                          </td>
-                          <td>
-                            {date(Date.parse(session.started_at))} ·{" "}
-                            {time(Date.parse(session.started_at))}
-                          </td>
-                          <td>
-                            {duration(
-                              Date.parse(
-                                session.ended_at ?? new Date(now).toISOString(),
-                              ) - Date.parse(session.started_at),
-                            )}
-                          </td>
-                          <td>
-                            {session.owner_id === auth.user!.id
-                              ? "Owner"
-                              : "Observer · read only"}
-                          </td>
-                          <td>{session.ended_at ? "Completed" : "Active"}</td>
-                          <td>
-                            <button
-                              className="text-button"
-                              onClick={() => {
-                                stopDrive();
-                                cloud.setSelectedId(session.id);
-                                setTab("overview");
-                              }}
-                            >
-                              Open session
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+              <CloudSessionHistory
+                sessions={sessions}
+                snapshot={snapshot}
+                selectedId={selectedId}
+                userId={auth.user.id}
+                now={now}
+                onSelect={(id) => {
+                  stopDrive();
+                  cloud.setSelectedId(id);
+                }}
+                onEvents={() => setTab("events")}
+                onExport={exportSession}
+                map={renderReviewMap(true)}
+                loading={cloud.loading}
+                error={cloud.error}
+              />
             ) : !snapshot ? (
               <section className="card cloud-empty">
                 <Database size={32} />
@@ -603,10 +634,22 @@ export function CloudDashboard({ onModeChange }: Props) {
                         : "Completed session · Historical records"}
                     </span>
                   </div>
-                  <button className="button secondary" onClick={exportSession}>
-                    <ArrowDownToLine size={14} />
-                    Export session
-                  </button>
+                  <div className="session-caption-actions">
+                    <button
+                      className="button secondary"
+                      onClick={showThresholds}
+                    >
+                      <Settings2 size={14} />
+                      Threshold settings
+                    </button>
+                    <button
+                      className="button secondary"
+                      onClick={exportSession}
+                    >
+                      <ArrowDownToLine size={14} />
+                      Export session
+                    </button>
+                  </div>
                 </div>
                 <section className="stats-grid cloud-stats">
                   <Stat
@@ -639,15 +682,17 @@ export function CloudDashboard({ onModeChange }: Props) {
                     icon={gatewayState === "fresh" ? Radio : WifiOff}
                     label="Gateway availability"
                     value={
-                      !active
-                        ? "Completed"
-                        : gatewayState === "fresh"
-                          ? "Recent report"
-                          : gatewayState === "disconnected"
-                            ? "Disconnected"
-                            : gatewayState === "stale"
-                              ? "Stale"
-                              : "Unknown"
+                      !online
+                        ? "Browser offline"
+                        : !active
+                          ? "Completed"
+                          : gatewayState === "fresh"
+                            ? "Recent report"
+                            : gatewayState === "disconnected"
+                              ? "Disconnected"
+                              : gatewayState === "stale"
+                                ? "Stale"
+                                : "Unknown"
                     }
                     detail={`${age(snapshot.connection?.recorded_at, now)} · Heartbeat limit 15s`}
                     tone={
@@ -658,21 +703,14 @@ export function CloudDashboard({ onModeChange }: Props) {
                   />
                 </section>
                 {tab === "events" ? (
-                  <section className="card">
-                    <div className="card-heading">
-                      <div>
-                        <h2>
-                          <Zap size={18} />
-                          Cloud threshold event records
-                        </h2>
-                        <p>
-                          All three IMUs · Immutable event-time thresholds and
-                          optional GPS locations
-                        </p>
-                      </div>
-                    </div>
-                    <CloudEvents events={events} />
-                  </section>
+                  <EventAnalysis
+                    key={snapshot.session.id}
+                    events={analysisEvents}
+                    now={now}
+                    selectedId={selectedEventId}
+                    onSelect={setSelectedEventId}
+                    map={renderReviewMap()}
+                  />
                 ) : (
                   <>
                     <div className="cloud-live-grid">
@@ -718,6 +756,8 @@ export function CloudDashboard({ onModeChange }: Props) {
                           mapLabel="Live GPS route of cloud driving session"
                           gpsStatusLabel="Recent GPS fix"
                           fitRoute
+                          selectedEventId={selectedEventId}
+                          onEventSelect={setSelectedEventId}
                         />
                         <div className="map-footer">
                           <span>
@@ -734,6 +774,21 @@ export function CloudDashboard({ onModeChange }: Props) {
                             km/h
                           </span>
                         </div>
+                        {selectedEventId && (
+                          <p className="map-selection-note" role="status">
+                            {analysisEvents.find(
+                              (e) => e.id === selectedEventId,
+                            )?.position
+                              ? "Selected historical event highlighted on the map."
+                              : "Selected event has no supplied GPS location."}{" "}
+                            <button
+                              className="text-button"
+                              onClick={() => setTab("events")}
+                            >
+                              Inspect event
+                            </button>
+                          </p>
+                        )}
                         <p className="cloud-gps-times">
                           Source fix:{" "}
                           {fix
@@ -767,6 +822,15 @@ export function CloudDashboard({ onModeChange }: Props) {
                                   {imu_id}
                                 </span>
                                 <h2>IMU {imu_id}</h2>
+                                <span
+                                  className="imu-traffic"
+                                  aria-label={`IMU ${imu_id} current measurement unavailable`}
+                                >
+                                  <i />
+                                  <i />
+                                  <i />
+                                  <i className="active-gray" />
+                                </span>
                                 <span className="cloud-unknown">
                                   <i />
                                   Current: Unknown
@@ -776,6 +840,22 @@ export function CloudDashboard({ onModeChange }: Props) {
                                 Event-only telemetry · Continuous acceleration
                                 not transmitted
                               </p>
+                              <div className="imu-reported-peak">
+                                <span>LAST REPORTED PEAK</span>
+                                <strong>
+                                  {event?.magnitude === null || !event
+                                    ? "—"
+                                    : event.magnitude.toFixed(2)}
+                                  <small> g</small>
+                                </strong>
+                                <span>
+                                  {event?.magnitude === null
+                                    ? "Magnitude not supplied"
+                                    : !event
+                                      ? "No event received"
+                                      : "Historical magnitude · Not current motion"}
+                                </span>
+                              </div>
                               <div className="cloud-last-event">
                                 {event ? (
                                   <>
@@ -788,8 +868,12 @@ export function CloudDashboard({ onModeChange }: Props) {
                                         : "Moderate"}
                                     </span>
                                     <span>
-                                      {time(Date.parse(event.recorded_at))} ·
-                                      Historical event
+                                      <time dateTime={event.recorded_at}>
+                                        {new Date(
+                                          event.recorded_at,
+                                        ).toLocaleString()}
+                                      </time>{" "}
+                                      · Historical event
                                     </span>
                                   </>
                                 ) : (
@@ -830,10 +914,19 @@ export function CloudDashboard({ onModeChange }: Props) {
                           View all events
                         </button>
                       </div>
-                      <CloudEvents events={events} compact />
+                      <CloudEvents
+                        events={events}
+                        compact
+                        selectedId={selectedEventId}
+                        onSelect={setSelectedEventId}
+                      />
                     </section>
                     <div className="cloud-settings-grid">
-                      <section className="card cloud-threshold-settings">
+                      <section
+                        className="card cloud-threshold-settings"
+                        id="cloud-threshold-settings"
+                        tabIndex={-1}
+                      >
                         <div className="card-heading">
                           <div>
                             <h2>
@@ -868,6 +961,12 @@ export function CloudDashboard({ onModeChange }: Props) {
                             }, "Threshold configurations saved. Restart the cloud test drive to use them. Future hardware must explicitly apply these settings.");
                           }}
                         >
+                          <div className="threshold-rule-strip">
+                            <span>Green: A &lt; T1</span>
+                            <span>Yellow: T1 ≤ A ≤ T2</span>
+                            <span>Red: A &gt; T2</span>
+                            <span>Gray: unavailable / stale</span>
+                          </div>
                           <div className="cloud-threshold-rows">
                             {draftThresholds.map((row, index) => (
                               <div key={row.imu_id}>
@@ -1091,7 +1190,7 @@ export function CloudDashboard({ onModeChange }: Props) {
             Raw IMU data stays on the ESP32-S3. Cloud events never imply current
             safe motion.
           </span>
-          <span>MSD · Supabase integration prototype</span>
+          <span>MSD Observer / Session telemetry</span>
         </footer>
       </main>
     </div>

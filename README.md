@@ -1,10 +1,21 @@
-# MSD Impact Monitor
+# MSD Observer Dashboard
 
-A React + TypeScript observer dashboard for vehicle GPS and threshold events. Stage 2 adds authenticated Supabase storage, shared real-time observation, three-IMU threshold configuration, and persistent cloud session history. The local demonstrations still run without Supabase configuration.
+A React + TypeScript observer dashboard for vehicle GPS and threshold events. The dark, map-led interface combines authenticated Supabase storage, shared realtime observation, three-IMU event history, threshold configuration, and session review. The local demonstrations still run without Supabase configuration.
 
-![MSD cloud observer with simulated cloud test records](docs/cloud-preview.png)
+![MSD cloud observer with simulated cloud test records](docs/pr4/observer-desktop.png)
 
 The cloud preview uses simulated test records. Configure your own Supabase project using the steps below to connect a hosted database.
+
+## Dashboard redesign / PR #4
+
+- **Live overview:** primary GPS map with captured route, supplied event markers, source-time GPS age, separate gateway/realtime status, and gray current IMU states for event-only cloud telemetry. Fit the recorded route or follow the current vehicle.
+- **Event analysis:** a discrete timeline, IMU/severity/time filters, inclusive custom date range, original event details, and synchronized map selection. An event without GPS explicitly cannot be highlighted; absent magnitude/sensor/threshold fields are never invented. No sparse event is rendered as a continuous acceleration chart.
+- **Session history:** searchable owned/shared sessions, status filtering, duration, event count, peak reported magnitude, recorded distance/route and export. Detail loads use the existing authorized session-selection path rather than fetching every session's telemetry upfront.
+- **Local demo:** explicitly simulated continuous axes remain available. Per-IMU readings remain unavailable because the aggregate local simulator does not supply them. Captured local routes can be reviewed during the browser visit; older seeded sessions have no invented GPS route or threshold snapshots.
+
+[Design notes and screenshots](docs/OBSERVER_REDESIGN.md) · [Download the simulation-only interactive demo](docs/pr4/msd-observer-demo.zip)
+
+The downloadable demo bundles the app, styles and fonts in one HTML file and disables cloud configuration. Unzip and open `msd-observer-demo.html`, or serve its folder with a local static HTTP server if your browser restricts file pages. No account or build service is required. Map tiles are optional; the clearly labeled illustrated fallback works offline. To regenerate it: `npm run build:demo` (writes ignored `work/msd-observer-demo.html`).
 
 ## Run locally
 
@@ -34,7 +45,7 @@ Use **Telemetry source** to switch between:
 | **Event-only preview** | Sparse local test events; no device connection or fabricated continuous values                                                           | In memory; resets on refresh                                      |
 | **Supabase cloud**     | Authenticated cloud sessions, live geographic GPS route, event locations, connection freshness, and threshold-event history for IMUs 1–3 | Database; survives visits and is shared with authorized observers |
 
-Cloud mode never falls back to demo values while claiming to show a real device. Sessions carry immutable **simulated** or **device** provenance. The optional cloud test drive uploads simulated GPS/events through the normal authenticated database path only into simulated sessions. No phone application, ESP32-S3 firmware, or physical sensor connection is included.
+Cloud mode never falls back to demo values while claiming to show a real device. Sessions carry immutable **simulated** or **device** provenance. The optional cloud test drive uploads simulated GPS/events through the normal authenticated database path only into simulated sessions. This dashboard redesign adds no firmware or physical sensor connection; the existing phone gateway under `mobile/` is unchanged.
 
 ## Enable Supabase cloud
 
@@ -68,9 +79,9 @@ Cloud GPS/events are immutable and use stable packet UUIDs and sequence numbers.
 - **Event-only preview:** **Inject test event** creates a labeled sparse local packet. It never establishes a real device connection or infers green from silence.
 - **History/export:** local mode histories stay separate and reset on refresh. Export JSON before refreshing to retain them. Cloud sessions and events reload from Supabase between visits.
 
-![MSD Impact Monitor local simulation](docs/dashboard.png)
+![MSD Impact Monitor local simulation](docs/pr4/local-simulation.png)
 
-![Local event-only preview with unknown motion and a sparse test event](docs/event-only.png)
+![Local event-only preview with unknown motion and a sparse test event](docs/pr4/event-only.png)
 
 ## Map behavior
 
