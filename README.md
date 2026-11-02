@@ -128,3 +128,7 @@ The deployment target is now **iPhone**. Free software validation runs on Linux/
 ## Netlify and iPhone observer installation
 
 See [the Netlify / iPhone PWA guide](docs/NETLIFY_OBSERVER.md) for GitHub-connected deployments from `main`, the two public Supabase environment variables, Auth redirect configuration, installation and verification. The observer uses HTTPS/Realtime and requires a network connection; it does not use Bluetooth or cache telemetry offline.
+
+## First physical ESP32 USB bench test
+
+The minimal firmware in `firmware/usb_simulator/` generates three IMUs' simulated X/Y/Z on an ESP32-S3 and sends sparse threshold events over native USB. The Python laptop bridge in `tools/serial_bridge/` authenticates as the session owner and uploads the captured events to an explicitly simulated cloud session using the existing RPCs. See the [Monterey flashing and observer verification guide](docs/ESP32_USB_TEST.md), including the #5477 / Reverse TFT product-number distinction. Physical hardware acceptance is pending; no real IMU drivers or BLE integration are included.
