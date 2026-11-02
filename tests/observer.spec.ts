@@ -213,7 +213,8 @@ test("dark desktop and touch layouts keep map and analysis accessible without pa
     )
     .toBe(true);
   await page
-    .getByRole("button", { name: "Event analysis", exact: true })
+    .getByRole("navigation", { name: "Phone navigation" })
+    .getByRole("button", { name: "Events", exact: true })
     .click();
   await expect(page.getByLabel("Filter by IMU", { exact: true })).toBeVisible();
   await expect

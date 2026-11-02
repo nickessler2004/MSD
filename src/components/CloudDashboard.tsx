@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
+  LayoutDashboard,
+  List,
   ArrowDownToLine,
   Check,
   Cloud,
@@ -42,6 +44,7 @@ import { EventAnalysis } from "./EventAnalysis";
 import { CloudSessionHistory } from "./CloudSessionHistory";
 import type { AnalysisEvent } from "../domain/eventAnalysis";
 import "./CloudDashboard.css";
+import { MobileObserverOverview } from "./MobileObserverOverview";
 import { ObserverInstruments } from "./ObserverInstruments";
 
 type Props = { onModeChange: (mode: TelemetryMode | "cloud") => void };
@@ -143,6 +146,14 @@ export function CloudDashboard({ onModeChange }: Props) {
   const cloud = useCloudSession(repository, auth.user?.id ?? null);
   const { snapshot, sessions, selectedId } = cloud;
   const [tab, setTab] = useState<"overview" | "history" | "events">("overview");
+  const [mobileView, setMobileView] = useState<
+    "overview" | "gps" | "imus" | "events" | "settings"
+  >("overview");
+  function switchMobileView(view: typeof mobileView) {
+    setMobileView(view);
+    setTab(view === "events" ? "events" : "overview");
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
   const [now, setNow] = useState(Date.now());
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [online, setOnline] = useState(navigator.onLine);
@@ -299,6 +310,7 @@ export function CloudDashboard({ onModeChange }: Props) {
   }
   function showThresholds() {
     setTab("overview");
+    setMobileView("settings");
     window.setTimeout(() => {
       const section = document.getElementById("cloud-threshold-settings");
       section?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -361,14 +373,24 @@ export function CloudDashboard({ onModeChange }: Props) {
   }
 
   return (
-    <div className="cloud-shell">
+    <div
+      className={`cloud-shell ${auth.user ? "cloud-authenticated" : ""}`}
+      data-mobile-view={mobileView}
+    >
       <header className="cloud-topbar">
         <a
           className="cloud-brand"
           href="#"
           onClick={(event) => {
             event.preventDefault();
-            onModeChange("simulation");
+            if (
+              auth.user &&
+              window.matchMedia(
+                "(max-width: 760px), (max-width: 950px) and (max-height: 500px)",
+              ).matches
+            )
+              switchMobileView("overview");
+            else onModeChange("simulation");
           }}
         >
           <span className="brand-mark">
@@ -409,6 +431,40 @@ export function CloudDashboard({ onModeChange }: Props) {
           )}
         </div>
       </header>
+      {auth.user && (
+        <div className="mobile-connection-strip">
+          <span role="status">
+            {!online
+              ? "Offline · Live updates unconfirmed"
+              : cloud.error
+                ? "Connection error · Live updates unconfirmed"
+                : cloud.realtimeStatus === "subscribed"
+                  ? "Realtime connected"
+                  : cloud.realtimeStatus === "connecting"
+                    ? "Connecting realtime…"
+                    : "Realtime unavailable · Refreshing every 10s"}
+          </span>
+          <small>
+            {gpsLive ? `GPS ${age(fix?.recorded_at, now)}` : "GPS unavailable"}
+            {gatewayState === "fresh" && active && online && !cloud.error
+              ? " · Gateway recent"
+              : " · Gateway unconfirmed"}
+          </small>
+          <button
+            className="text-button"
+            aria-label="Refresh mobile records"
+            disabled={busy}
+            onClick={() =>
+              void act(async () => {
+                await cloud.refreshSessions();
+                await cloud.refreshSnapshot();
+              }, "Cloud records refreshed.")
+            }
+          >
+            <RefreshCw size={16} />
+          </button>
+        </div>
+      )}
       <main className="cloud-main">
         <div className="cloud-page-heading">
           <div>
@@ -566,7 +622,10 @@ export function CloudDashboard({ onModeChange }: Props) {
                   key={value}
                   aria-current={tab === value ? "page" : undefined}
                   className={tab === value ? "active" : ""}
-                  onClick={() => setTab(value)}
+                  onClick={() => {
+                    setTab(value);
+                    setMobileView(value === "overview" ? "overview" : "events");
+                  }}
                 >
                   {
                     {
@@ -597,7 +656,10 @@ export function CloudDashboard({ onModeChange }: Props) {
                   stopDrive();
                   cloud.setSelectedId(id);
                 }}
-                onEvents={() => setTab("events")}
+                onEvents={() => {
+                  setTab("events");
+                  setMobileView("events");
+                }}
                 onExport={exportSession}
                 map={renderReviewMap(true)}
                 loading={cloud.loading}
@@ -652,6 +714,12 @@ export function CloudDashboard({ onModeChange }: Props) {
                     </button>
                   </div>
                 </div>
+                <MobileObserverOverview
+                  fix={fix}
+                  gpsLive={gpsLive}
+                  fixAge={age(fix?.recorded_at, now)}
+                  events={events}
+                />
                 <section className="stats-grid cloud-stats">
                   <Stat
                     icon={MapPin}
@@ -784,7 +852,10 @@ export function CloudDashboard({ onModeChange }: Props) {
                               : "Selected event has no supplied GPS location."}{" "}
                             <button
                               className="text-button"
-                              onClick={() => setTab("events")}
+                              onClick={() => {
+                                setTab("events");
+                                setMobileView("events");
+                              }}
                             >
                               Inspect event
                             </button>
@@ -913,7 +984,10 @@ export function CloudDashboard({ onModeChange }: Props) {
                         </div>
                         <button
                           className="text-button"
-                          onClick={() => setTab("events")}
+                          onClick={() => {
+                            setTab("events");
+                            setMobileView("events");
+                          }}
                         >
                           View all events
                         </button>
@@ -1197,6 +1271,28 @@ export function CloudDashboard({ onModeChange }: Props) {
           <span>MSD Observer / Session telemetry</span>
         </footer>
       </main>
+      {auth.user && (
+        <nav className="mobile-observer-nav" aria-label="Phone navigation">
+          {(
+            [
+              ["overview", "Overview", LayoutDashboard],
+              ["gps", "GPS", MapPin],
+              ["imus", "IMUs", Activity],
+              ["events", "Events", List],
+              ["settings", "Settings", Settings2],
+            ] as const
+          ).map(([view, label, Icon]) => (
+            <button
+              key={view}
+              aria-current={mobileView === view ? "page" : undefined}
+              onClick={() => switchMobileView(view)}
+            >
+              <Icon size={20} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }

@@ -20,6 +20,10 @@ test("GPS instruments support time windows and fit mobile", async ({
   await page.getByLabel("GPS chart window").selectOption("10");
 
   await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("navigation", { name: "Phone navigation" })
+    .getByRole("button", { name: "GPS", exact: true })
+    .click();
   await expect(page.getByLabel("Recorded GPS instruments")).toBeVisible();
   expect(
     await page.evaluate(

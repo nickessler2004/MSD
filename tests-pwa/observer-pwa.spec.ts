@@ -82,6 +82,8 @@ test("installed worker does not cache authenticated telemetry and offline never 
   await expect(
     page.getByLabel("IMU 2 event status", { exact: true }),
   ).toContainText("Current: Unknown");
+  const phoneNav = page.getByRole("navigation", { name: "Phone navigation" });
+  await phoneNav.getByRole("button", { name: "GPS", exact: true }).click();
   await expect.poll(() => fixture.socketCount).toBe(1);
   fixture.addGps(fixture.point(3, 37.779, -122.418));
   await expect(page.locator(".cloud-map-card .map-footer")).toContainText(
@@ -99,6 +101,7 @@ test("installed worker does not cache authenticated telemetry and offline never 
   await expect(
     page.getByLabel("IMU 1 event status", { exact: true }),
   ).toContainText("1.20");
+  await phoneNav.getByRole("button", { name: "Events", exact: true }).click();
   await page
     .getByRole("button", { name: "Session history", exact: true })
     .click();
@@ -109,12 +112,10 @@ test("installed worker does not cache authenticated telemetry and offline never 
     .getByRole("button", { name: "Event analysis", exact: true })
     .click();
   await expect(page.getByRole("table").locator("tbody tr")).toHaveCount(2);
-  await page
-    .getByRole("button", { name: "Live overview", exact: true })
-    .click();
+  await phoneNav.getByRole("button", { name: "GPS", exact: true }).click();
   fixture.gps.at(-1)!.recorded_at = new Date().toISOString();
   await page
-    .getByRole("button", { name: "Refresh records", exact: true })
+    .getByRole("button", { name: "Refresh mobile records", exact: true })
     .click();
   await expect(page.locator(".cloud-map-card .vehicle-map__status")).toHaveText(
     "Recent GPS fix",
@@ -137,7 +138,7 @@ test("installed worker does not cache authenticated telemetry and offline never 
   await context.setOffline(false);
   fixture.gps.at(-1)!.recorded_at = new Date().toISOString();
   await page
-    .getByRole("button", { name: "Refresh records", exact: true })
+    .getByRole("button", { name: "Refresh mobile records", exact: true })
     .click();
   await expect(page.locator(".cloud-map-card .vehicle-map__status")).toHaveText(
     "Recent GPS fix",
@@ -146,6 +147,7 @@ test("installed worker does not cache authenticated telemetry and offline never 
   await expect(
     page.getByText("Observer · read only", { exact: true }),
   ).toBeVisible();
+  await phoneNav.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page.getByLabel("Email address", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => caches.keys())).toEqual([]);

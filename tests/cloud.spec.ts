@@ -248,6 +248,10 @@ test("local and cloud modes remain separate and cloud layout fits a phone", asyn
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  await page
+    .getByRole("navigation", { name: "Phone navigation" })
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
   const source = page.getByRole("combobox", { name: "Telemetry source" });
   await source.selectOption("simulation");
   await expect(
@@ -255,7 +259,14 @@ test("local and cloud modes remain separate and cloud layout fits a phone", asyn
   ).toBeVisible();
   await expect(page.locator(".axis-reading")).toHaveCount(3);
   await source.selectOption("cloud");
-  await expectSession(page);
+  await expect(page.getByLabel("Mobile session overview")).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Phone navigation" })
+    .getByRole("button", { name: "GPS", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Live GPS route", exact: true }),
+  ).toBeVisible();
   await expect(page.locator(".axis-reading")).toHaveCount(0);
   expect(
     await page.evaluate(

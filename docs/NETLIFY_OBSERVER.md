@@ -11,6 +11,20 @@ This is the existing React/Vite observer dashboard, not the phone gateway. Obser
 - The service worker has **no fetch handler**, precache, Cache API writes, offline page or background sync. It never stores/replays auth, GPS, IMU events, session history or API responses. Realtime is not intercepted. HTML/manifest/worker use `Cache-Control: no-store`; fingerprinted static assets can use immutable browser caching. The current screen may retain labeled historical records when connection is lost, but existing offline handling removes live GPS confirmation and marks live updates unconfirmed. Initial loading offline fails normally; this is not an offline telemetry application.
 - Existing loading, missing-configuration, failed-authentication, disconnected, stale and unavailable states remain in place. On returning from the background, observe the source timestamps/freshness indicators; do not treat an open app as proof that telemetry is live.
 
+## Phone navigation
+
+At phone widths up to 760px (and short landscape windows up to 950px), the authenticated observer uses fixed bottom navigation:
+
+- **Overview:** compact GPS freshness, speed, position, accuracy, all three unknown-current IMU statuses with last reported peaks, and the latest historical event. The normal overview is checked to fit 390×844 and 375×667 viewports without scrolling. Long session names, warnings, larger text and shorter/landscape windows may require scrolling so information stays readable.
+- **GPS:** recorded route, vehicle/event markers and supplied GPS speed/accuracy instruments.
+- **IMUs:** the existing three detailed sensor panels. Historical peaks never become current measurements.
+- **Events:** event analysis and a Session History button for reviewing/exporting recorded sessions.
+- **Settings:** session selection, permitted threshold/sharing controls, source selection, account and sign-out. Owner-only actions retain their existing authorization checks.
+
+[Preview of the phone Overview](pr5/phone-overview.png) — captured from the application with labeled simulated browser fixtures, not real driver data.
+
+The sticky connection/GPS status strip and manual refresh remain available on every phone view. Switching views keeps the selected session and does not restart authentication or telemetry subscriptions. The bottom bar reserves space for the iPhone Home indicator. Details, lists and settings can scroll; fixed navigation never requires squeezing text to fit. Desktop retains the existing dashboard layout and navigation. The separate gateway app is unchanged.
+
 ## Manual Netlify steps
 
 1. Merge this PR only after review. Sign up for Netlify's free plan and choose **Add new project / Import an existing project**, then **GitHub**. Grant access to this repository (`nickessler2004/MSD`). You do not need to grant access to other repositories.
@@ -38,9 +52,9 @@ Netlify's free plan has usage limits; monitor its usage dashboard. No paid Netli
 1. Open the final HTTPS URL in **Safari**, not an embedded Messages browser. Sign in with an authorized observer account. Confirm the shared session is available.
 2. Tap **Share → Add to Home Screen** (on current iOS this may be under **More**). Keep the name **MSD Observer**. Enable **Open as Web App** if offered, then tap **Add**.
 3. Launch the new icon. It should open without Safari's normal address bar. Sign in again if the Home Screen app has a separate auth session from Safari. Existing password/session handling is unchanged.
-4. Check live GPS, historical IMU events, event analysis and session history. Rotate the phone and scroll; verify controls and tables remain usable. No Bluetooth prompt should appear.
-5. With the app open, turn on Airplane Mode. Live updates must become unconfirmed and GPS unavailable; IMUs must not become green from silence. Historical records may remain labeled historical. Restore connectivity and use **Refresh records** if needed. Fresh source timestamps must return before treating GPS as live.
-6. Close the app, go offline and launch it again: no offline dashboard is promised. Reconnect to sign in or load records. Sign out when finished on a shared device.
+4. Use the bottom buttons to check Overview, GPS, IMUs, and Events. Open Session History under Events and session/account controls under Settings. Rotate the phone and scroll; verify controls and tables remain usable. No Bluetooth prompt should appear.
+5. With the app open, turn on Airplane Mode. Live updates must become unconfirmed and GPS unavailable; IMUs must not become green from silence. Historical records may remain labeled historical. Restore connectivity and use the refresh button in the connection strip if needed. Fresh source timestamps must return before treating GPS as live.
+6. Close the app, go offline and launch it again: no offline dashboard is promised. Reconnect to sign in or load records. Open Settings and sign out when finished on a shared device.
 7. On a computer, open the same HTTPS address and use the existing authorized sign-in. Install prompts vary by browser; installation is optional.
 
 Before relying on production, test with both an owner and an observer: observer can read shared records but cannot configure thresholds or share sessions; an unrelated account cannot read the session. Use existing authorized data for manual read checks rather than uploading synthetic records to production.
