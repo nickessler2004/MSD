@@ -907,3 +907,225 @@
     height: 290px;
   }
 }
+
+/* Netlify reference: flat charcoal instruments with a map-first mobile stack. */
+.cloud-shell {
+  --border: #303940;
+  background: #13181e;
+  color: #e1e6eb;
+}
+.cloud-shell .card,
+.cloud-shell .cloud-topbar,
+.cloud-shell .cloud-session-toolbar,
+.cloud-shell .cloud-tabs > button.active {
+  background: #1b232a;
+  border-color: var(--border);
+  border-radius: 2px;
+  box-shadow: none;
+}
+.cloud-shell .cloud-main {
+  max-width: 1920px;
+  padding: 20px 20px 28px;
+}
+.cloud-shell .cloud-topbar {
+  min-height: 64px;
+  padding: 12px 20px;
+  background: #13181e;
+}
+.cloud-shell .cloud-page-heading {
+  margin-bottom: 16px;
+}
+.cloud-shell .cloud-page-heading h1 {
+  font-size: 24px;
+  margin-top: 4px;
+}
+.cloud-shell .cloud-session-caption {
+  margin-bottom: 12px;
+}
+.cloud-shell .cloud-stats {
+  gap: 0;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  background: #1b232a;
+}
+.cloud-shell .cloud-stats > * {
+  border-radius: 0;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  box-shadow: none;
+}
+.cloud-shell .stat-value,
+.cloud-shell .imu-reported-peak strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-shell .cloud-live-grid {
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.35fr);
+  gap: 12px;
+  align-items: stretch;
+}
+.cloud-shell .cloud-map-card .vehicle-map {
+  height: 610px;
+  border-radius: 0;
+}
+.cloud-shell .cloud-map-card .leaflet-tile-pane {
+  filter: none;
+}
+.cloud-shell .cloud-map-card.vehicle-map--unavailable .leaflet-tile-pane {
+  opacity: 1;
+}
+.cloud-shell .card-heading {
+  padding: 14px 16px;
+}
+.cloud-shell .cloud-imu-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.cloud-shell .cloud-imu-card {
+  border-top: 0;
+  padding: 12px 16px;
+  background: #171e24;
+}
+.cloud-shell .cloud-imu-card > p {
+  margin: 6px 0;
+}
+.cloud-shell .imu-reported-peak {
+  margin: 7px 0;
+}
+.cloud-shell .imu-reported-peak strong {
+  font-size: 23px;
+}
+.cloud-shell .cloud-imu-card footer {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.observer-right-column {
+  min-width: 0;
+}
+.observer-instruments {
+  border: 1px solid #303940;
+  background: #13181e;
+}
+.instrument-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  color: #a6afb8;
+}
+.instrument-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.instrument-toolbar select {
+  background: #202930;
+  border: 1px solid #3a454e;
+  color: #dce4ea;
+  padding: 6px;
+  border-radius: 4px;
+}
+.instrument-panel {
+  position: relative;
+  height: 156px;
+  border-top: 1px solid #303940;
+  background-image:
+    linear-gradient(#8b98a51c 1px, transparent 1px),
+    linear-gradient(90deg, #8b98a51c 1px, transparent 1px);
+  background-size:
+    100% 28px,
+    20% 100%;
+}
+.instrument-panel header {
+  position: absolute;
+  inset: 8px 12px auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.instrument-panel h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #b4bdc6;
+}
+.instrument-panel header span {
+  font-size: 11px;
+}
+.instrument-panel svg {
+  width: 100%;
+  height: 100%;
+}
+.instrument-panel text {
+  fill: #929da7;
+  font:
+    13px ui-monospace,
+    monospace;
+}
+.instrument-empty {
+  position: absolute;
+  inset: 65px 0 auto;
+  text-align: center;
+  color: #a6afb8;
+  font:
+    12px ui-monospace,
+    monospace;
+}
+.instrument-time {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  color: #a6afb8;
+  font:
+    10px ui-monospace,
+    monospace;
+}
+@media (max-width: 900px) {
+  .cloud-shell .cloud-live-grid {
+    grid-template-columns: 1fr;
+  }
+  .cloud-shell .cloud-map-card .vehicle-map {
+    height: min(68vw, 560px);
+    min-height: 300px;
+  }
+  .cloud-shell .cloud-main {
+    padding: 16px 12px;
+  }
+  .cloud-shell .cloud-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cloud-shell .cloud-stats > * {
+    border-bottom: 1px solid var(--border);
+  }
+}
+@media (max-width: 430px) {
+  .cloud-shell .cloud-main {
+    padding: 12px 8px;
+  }
+  .cloud-shell .cloud-topbar {
+    padding: 12px;
+  }
+  .instrument-time {
+    flex-wrap: wrap;
+  }
+  .instrument-toolbar {
+    padding: 10px;
+  }
+}
+.instrument-scale {
+  position: absolute;
+  top: 38px;
+  bottom: 29px;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #929da7;
+  font:
+    11px ui-monospace,
+    monospace;
+}

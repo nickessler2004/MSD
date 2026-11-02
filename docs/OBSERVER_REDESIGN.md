@@ -53,3 +53,7 @@ npm run format:check
 ```
 
 Optional live read/render validation uses the existing credentials and explicit opt-in described in the Stage 3 validation instructions: `MSD_LIVE_VALIDATION=1 MSD_NODE_HTTP_RELAY=1 NODE_USE_ENV_PROXY=1 npm run test:live:dashboard` after a configured production build. Normal CI tests use isolated browser fixtures and never write to the live project.
+
+## Netlify reference follow-up
+
+The desktop and mobile references supplied November 1 guide the cloud overview: flat charcoal surfaces, a large left map, stacked instrument panels on the right, monospace values, and a single-column map-first mobile layout. GPS speed and horizontal accuracy instruments use supplied, source-time-ordered records and offer full-session, 10-second and 60-second windows. Missing values break traces; missing accuracy remains unavailable. Three IMU panels retain historical peaks and unknown current readings because this backend supplies threshold events, not continuous IMU samples. Playback and calibration traces from the reference are not represented as available telemetry. Frontend only; backend, gateway and firmware remain unchanged.

@@ -42,6 +42,7 @@ import { EventAnalysis } from "./EventAnalysis";
 import { CloudSessionHistory } from "./CloudSessionHistory";
 import type { AnalysisEvent } from "../domain/eventAnalysis";
 import "./CloudDashboard.css";
+import { ObserverInstruments } from "./ObserverInstruments";
 
 type Props = { onModeChange: (mode: TelemetryMode | "cloud") => void };
 const age = (value: string | undefined, now: number) =>
@@ -800,98 +801,101 @@ export function CloudDashboard({ onModeChange }: Props) {
                             : "Not received"}
                         </p>
                       </section>
-                      <section
-                        className="cloud-imu-grid"
-                        aria-label="Three IMU event statuses"
-                      >
-                        {imuIds.map((imu_id) => {
-                          const event = events
-                            .filter((item) => item.imu_id === imu_id)
-                            .at(-1);
-                          const threshold = snapshot.thresholds.find(
-                            (item) => item.imu_id === imu_id,
-                          );
-                          return (
-                            <article
-                              className="card cloud-imu-card"
-                              aria-label={`IMU ${imu_id} event status`}
-                              key={imu_id}
-                            >
-                              <div className="cloud-imu-title">
-                                <span className="cloud-imu-number">
-                                  {imu_id}
-                                </span>
-                                <h2>IMU {imu_id}</h2>
-                                <span
-                                  className="imu-traffic"
-                                  aria-label={`IMU ${imu_id} current measurement unavailable`}
-                                >
-                                  <i />
-                                  <i />
-                                  <i />
-                                  <i className="active-gray" />
-                                </span>
-                                <span className="cloud-unknown">
-                                  <i />
-                                  Current: Unknown
-                                </span>
-                              </div>
-                              <p>
-                                Event-only telemetry · Continuous acceleration
-                                not transmitted
-                              </p>
-                              <div className="imu-reported-peak">
-                                <span>LAST REPORTED PEAK</span>
-                                <strong>
-                                  {event?.magnitude === null || !event
-                                    ? "—"
-                                    : event.magnitude.toFixed(2)}
-                                  <small> g</small>
-                                </strong>
-                                <span>
-                                  {event?.magnitude === null
-                                    ? "Magnitude not supplied"
-                                    : !event
-                                      ? "No event received"
-                                      : "Historical magnitude · Not current motion"}
-                                </span>
-                              </div>
-                              <div className="cloud-last-event">
-                                {event ? (
-                                  <>
-                                    <span
-                                      className={`severity-badge ${event.severity}`}
-                                    >
-                                      <i />
-                                      {event.severity === "critical"
-                                        ? "High impact"
-                                        : "Moderate"}
-                                    </span>
-                                    <span>
-                                      <time dateTime={event.recorded_at}>
-                                        {new Date(
-                                          event.recorded_at,
-                                        ).toLocaleString()}
-                                      </time>{" "}
-                                      · Historical event
-                                    </span>
-                                  </>
-                                ) : (
-                                  <span>
-                                    No event received · Silence does not confirm
-                                    green
+                      <div className="observer-right-column">
+                        <ObserverInstruments gps={gps} />
+                        <section
+                          className="cloud-imu-grid"
+                          aria-label="Three IMU event statuses"
+                        >
+                          {imuIds.map((imu_id) => {
+                            const event = events
+                              .filter((item) => item.imu_id === imu_id)
+                              .at(-1);
+                            const threshold = snapshot.thresholds.find(
+                              (item) => item.imu_id === imu_id,
+                            );
+                            return (
+                              <article
+                                className="card cloud-imu-card"
+                                aria-label={`IMU ${imu_id} event status`}
+                                key={imu_id}
+                              >
+                                <div className="cloud-imu-title">
+                                  <span className="cloud-imu-number">
+                                    {imu_id}
                                   </span>
-                                )}
-                              </div>
-                              <footer>
-                                T1 {threshold?.t1.toFixed(2) ?? "—"} g{" "}
-                                <span>·</span> T2{" "}
-                                {threshold?.t2.toFixed(2) ?? "—"} g
-                              </footer>
-                            </article>
-                          );
-                        })}
-                      </section>
+                                  <h2>IMU {imu_id}</h2>
+                                  <span
+                                    className="imu-traffic"
+                                    aria-label={`IMU ${imu_id} current measurement unavailable`}
+                                  >
+                                    <i />
+                                    <i />
+                                    <i />
+                                    <i className="active-gray" />
+                                  </span>
+                                  <span className="cloud-unknown">
+                                    <i />
+                                    Current: Unknown
+                                  </span>
+                                </div>
+                                <p>
+                                  Event-only telemetry · Continuous acceleration
+                                  not transmitted
+                                </p>
+                                <div className="imu-reported-peak">
+                                  <span>LAST REPORTED PEAK</span>
+                                  <strong>
+                                    {event?.magnitude === null || !event
+                                      ? "—"
+                                      : event.magnitude.toFixed(2)}
+                                    <small> g</small>
+                                  </strong>
+                                  <span>
+                                    {event?.magnitude === null
+                                      ? "Magnitude not supplied"
+                                      : !event
+                                        ? "No event received"
+                                        : "Historical magnitude · Not current motion"}
+                                  </span>
+                                </div>
+                                <div className="cloud-last-event">
+                                  {event ? (
+                                    <>
+                                      <span
+                                        className={`severity-badge ${event.severity}`}
+                                      >
+                                        <i />
+                                        {event.severity === "critical"
+                                          ? "High impact"
+                                          : "Moderate"}
+                                      </span>
+                                      <span>
+                                        <time dateTime={event.recorded_at}>
+                                          {new Date(
+                                            event.recorded_at,
+                                          ).toLocaleString()}
+                                        </time>{" "}
+                                        · Historical event
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span>
+                                      No event received · Silence does not
+                                      confirm green
+                                    </span>
+                                  )}
+                                </div>
+                                <footer>
+                                  T1 {threshold?.t1.toFixed(2) ?? "—"} g{" "}
+                                  <span>·</span> T2{" "}
+                                  {threshold?.t2.toFixed(2) ?? "—"} g
+                                </footer>
+                              </article>
+                            );
+                          })}
+                        </section>
+                      </div>
                     </div>
                     <section className="card cloud-recent">
                       <div className="card-heading">
