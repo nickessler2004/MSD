@@ -1,25 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
-  ArrowDownToLine,
-  Check,
   Cloud,
   Database,
   LogOut,
-  MapPin,
   Play,
   Plus,
-  Radio,
-  RefreshCw,
-  Route,
   Settings2,
   ShieldCheck,
   Square,
   Users,
-  WifiOff,
-  Zap,
 } from "lucide-react";
-import type { CloudThresholdEvent, ImuId } from "../domain/cloud";
+import type { ImuId } from "../domain/cloud";
 import type { TelemetryMode } from "../domain/types";
 import {
   connectionFreshness,
@@ -27,7 +19,6 @@ import {
   latestGps,
   normalizeEvents,
   normalizeGps,
-  routeDistanceKm,
 } from "../domain/cloudRecords";
 import { getSupabaseClient, getSupabaseConfig } from "../services/supabase";
 import { CloudRepository } from "../services/cloudRepository";
@@ -35,102 +26,18 @@ import { startCloudSimulation } from "../services/cloudSimulator";
 import { useCloudAuth } from "../hooks/useCloudAuth";
 import { useCloudSession } from "../hooks/useCloudSession";
 import { CloudAuth } from "./CloudAuth";
-import { Stat } from "./StatCard";
 import { VehicleMap } from "./VehicleMap";
-import { date, time } from "../lib/format";
-import { EventAnalysis } from "./EventAnalysis";
-import { CloudSessionHistory } from "./CloudSessionHistory";
+
 import type { AnalysisEvent } from "../domain/eventAnalysis";
 import "./CloudDashboard.css";
-import { ObserverInstruments } from "./ObserverInstruments";
+import { ObserverWorkspace } from "./ObserverWorkspace";
 
 type Props = { onModeChange: (mode: TelemetryMode | "cloud") => void };
-const age = (value: string | undefined, now: number) =>
-  value
-    ? `${Math.max(0, Math.floor((now - Date.parse(value)) / 1000))}s ago`
-    : "Never received";
 const imuIds: ImuId[] = [1, 2, 3];
 const message = (error: unknown) =>
   error instanceof Error
     ? error.message
     : "Cloud operation failed. Please retry.";
-
-function CloudEvents({
-  events,
-  compact = false,
-  selectedId,
-  onSelect,
-}: {
-  events: CloudThresholdEvent[];
-  compact?: boolean;
-  selectedId?: string | null;
-  onSelect?: (id: string) => void;
-}) {
-  const sorted = [...events].reverse();
-  return (
-    <div className="table-scroll">
-      <table className="events-table cloud-events-table">
-        <thead>
-          <tr>
-            <th>EVENT TIME / IMU</th>
-            <th>REPORTED STATUS</th>
-            <th>PEAK A</th>
-            <th>EVENT LOCATION</th>
-            <th>THRESHOLD SNAPSHOT</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(compact ? sorted.slice(0, 5) : sorted).map((event) => (
-            <tr
-              key={event.id}
-              className={selectedId === event.id ? "selected-event" : ""}
-            >
-              <td>
-                <button
-                  className="event-select-button"
-                  onClick={() => onSelect?.(event.id)}
-                  aria-pressed={selectedId === event.id}
-                >
-                  <strong>{time(Date.parse(event.recorded_at))}</strong>
-                </button>
-                <small>
-                  {date(Date.parse(event.recorded_at))} · IMU {event.imu_id}
-                </small>
-              </td>
-              <td>
-                <span className={`severity-badge ${event.severity}`}>
-                  <i />
-                  {event.severity === "critical" ? "High impact" : "Moderate"}
-                </span>
-                <small>Historical event</small>
-              </td>
-              <td>
-                {event.magnitude === null
-                  ? "Not supplied"
-                  : `${event.magnitude.toFixed(2)} g`}
-              </td>
-              <td>
-                {event.latitude === null || event.longitude === null
-                  ? "Not supplied"
-                  : `${event.latitude.toFixed(5)}, ${event.longitude.toFixed(5)}`}
-              </td>
-              <td>
-                T1 {event.t1.toFixed(2)} g · T2 {event.t2.toFixed(2)} g
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {events.length === 0 && (
-        <div className="empty-state">
-          <ShieldCheck size={25} />
-          <strong>No threshold events recorded</strong>
-          <p>Event silence does not confirm safe motion.</p>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function CloudDashboard({ onModeChange }: Props) {
   const [config] = useState(getSupabaseConfig);
@@ -142,7 +49,15 @@ export function CloudDashboard({ onModeChange }: Props) {
   const auth = useCloudAuth(client);
   const cloud = useCloudSession(repository, auth.user?.id ?? null);
   const { snapshot, sessions, selectedId } = cloud;
-  const [tab, setTab] = useState<"overview" | "history" | "events">("overview");
+  const [thresholdSensor, setThresholdSensor] = useState("1");
+  const [observerPage, setObserverPage] = useState(0);
+  useEffect(
+    () =>
+      setObserverPage((page) =>
+        Math.min(page, Math.max(0, (snapshot?.observers.length ?? 0) - 1)),
+      ),
+    [snapshot?.observers.length],
+  );
   const [now, setNow] = useState(Date.now());
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [online, setOnline] = useState(navigator.onLine);
@@ -155,7 +70,10 @@ export function CloudDashboard({ onModeChange }: Props) {
       window.removeEventListener("offline", update);
     };
   }, []);
-  useEffect(() => setSelectedEventId(null), [selectedId]);
+  useEffect(() => {
+    setSelectedEventId(null);
+    setObserverPage(0);
+  }, [selectedId]);
   const [label, setLabel] = useState("");
   const [dataSource, setDataSource] = useState<"simulated" | "device">(
     "simulated",
@@ -207,7 +125,11 @@ export function CloudDashboard({ onModeChange }: Props) {
   const owner = Boolean(
     snapshot && auth.user?.id === snapshot.session.owner_id,
   );
-  const active = Boolean(snapshot && !snapshot.session.ended_at);
+  const active = Boolean(
+    snapshot &&
+    snapshot.session.id === selectedId &&
+    !snapshot.session.ended_at,
+  );
   const gpsLive = gpsState === "fresh" && active && !cloud.error && online;
   const route = useMemo(
     () =>
@@ -297,14 +219,6 @@ export function CloudDashboard({ onModeChange }: Props) {
       setBusy(false);
     }
   }
-  function showThresholds() {
-    setTab("overview");
-    window.setTimeout(() => {
-      const section = document.getElementById("cloud-threshold-settings");
-      section?.scrollIntoView({ behavior: "smooth", block: "start" });
-      section?.focus({ preventScroll: true });
-    }, 0);
-  }
   function stopDrive() {
     feedStop.current?.();
     feedStop.current = null;
@@ -360,8 +274,422 @@ export function CloudDashboard({ onModeChange }: Props) {
     URL.revokeObjectURL(url);
   }
 
+  if (auth.user && config.ready)
+    return (
+      <ObserverWorkspace
+        snapshot={snapshot}
+        sessions={sessions}
+        selectedId={selectedId}
+        userId={auth.user.id}
+        now={now}
+        online={online}
+        loading={cloud.loading}
+        gps={gps}
+        events={analysisEvents}
+        fix={fix}
+        gpsLive={gpsLive}
+        realtimeStatus={cloud.realtimeStatus}
+        gatewayState={gatewayState}
+        error={actionError || cloud.error || auth.error}
+        notice={notice}
+        busy={busy}
+        onRefresh={() =>
+          void act(async () => {
+            await cloud.refreshSessions();
+            await cloud.refreshSnapshot();
+          }, "Cloud records refreshed.")
+        }
+        onSelectSession={(id) => {
+          stopDrive();
+          cloud.setSelectedId(id);
+        }}
+        onExport={exportSession}
+        selectedEventId={selectedEventId}
+        onSelectEvent={setSelectedEventId}
+        map={renderReviewMap()}
+        selectedImu={thresholdSensor}
+        onSelectImu={setThresholdSensor}
+        imuPanel={
+          snapshot ? (
+            <section
+              className="cloud-imu-grid"
+              aria-label="Three IMU event statuses"
+            >
+              {imuIds.map((imu_id) => {
+                return (
+                  <article
+                    className="card cloud-imu-card"
+                    aria-label={`IMU ${imu_id} event status`}
+                    key={imu_id}
+                  >
+                    <div className="cloud-imu-title">
+                      <span className="cloud-imu-number">{imu_id}</span>
+                      <h2>IMU {imu_id}</h2>
+                      <span
+                        className="imu-traffic"
+                        aria-label={`IMU ${imu_id} current measurement unavailable`}
+                      >
+                        <i />
+                        <i />
+                        <i />
+                        <i className="active-gray" />
+                      </span>
+                      <span className="cloud-unknown">
+                        <i />
+                        Current: Unknown
+                      </span>
+                    </div>
+                    <p>
+                      Event-only telemetry · Continuous acceleration not
+                      transmitted
+                    </p>
+                  </article>
+                );
+              })}
+            </section>
+          ) : null
+        }
+        settings={{
+          session: (
+            <section className="card cloud-session-toolbar">
+              <form
+                className="cloud-create"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!repository) return;
+                  void act(async () => {
+                    const id = await repository.createSession(
+                      label.trim(),
+                      dataSource,
+                    );
+                    await cloud.refreshSessions();
+                    cloud.setSelectedId(id);
+                    setLabel("");
+                  }, "Cloud session created with three IMU threshold configurations.");
+                }}
+              >
+                <input
+                  aria-label="Session name"
+                  placeholder="Name your next session"
+                  value={label}
+                  onChange={(event) => setLabel(event.target.value)}
+                  maxLength={100}
+                  required
+                />
+                <select
+                  aria-label="Cloud data source"
+                  value={dataSource}
+                  onChange={(event) =>
+                    setDataSource(event.target.value as "simulated" | "device")
+                  }
+                >
+                  <option value="simulated">Simulated data</option>
+                  <option value="device">Device data</option>
+                </select>
+                <button className="button primary" disabled={busy}>
+                  <Plus size={14} />
+                  New cloud session
+                </button>
+              </form>
+            </section>
+          ),
+          thresholds: snapshot ? (
+            <section
+              className="card cloud-threshold-settings"
+              id="cloud-threshold-settings"
+              tabIndex={-1}
+            >
+              <div className="card-heading">
+                <div>
+                  <h2>
+                    <Settings2 size={18} />
+                    Cloud thresholds (g)
+                  </h2>
+                  <p>Green A &lt; T1 · Yellow T1 ≤ A ≤ T2 · Red A &gt; T2</p>
+                </div>
+                <span className="unit-label">
+                  {owner ? "OWNER SETTINGS" : "READ ONLY"}
+                </span>
+              </div>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!repository || !validThresholds || !owner) return;
+                  stopDrive();
+                  void act(async () => {
+                    await repository.setThresholds(
+                      snapshot.session.id,
+                      draftThresholds.map((row) => ({
+                        imu_id: row.imu_id,
+                        t1: Number(row.t1),
+                        t2: Number(row.t2),
+                      })),
+                    );
+                    await cloud.refreshSnapshot();
+                  }, "Cloud thresholds saved.");
+                }}
+              >
+                <div
+                  className="cloud-threshold-rows"
+                  data-threshold-sensor={thresholdSensor}
+                >
+                  {draftThresholds.map((row, index) => (
+                    <div key={row.imu_id}>
+                      <strong>IMU {row.imu_id}</strong>
+                      {(["t1", "t2"] as const).map((key) => (
+                        <label key={key}>
+                          {key.toUpperCase()}
+                          <input
+                            aria-label={`IMU ${row.imu_id} ${key.toUpperCase()}`}
+                            type="number"
+                            min="0.1"
+                            max="10"
+                            step="0.1"
+                            value={row[key]}
+                            disabled={!owner || !active || busy}
+                            onChange={(event) =>
+                              setDraftThresholds((old) =>
+                                old.map((item, i) =>
+                                  i === index
+                                    ? {
+                                        ...item,
+                                        [key]: event.target.value,
+                                      }
+                                    : item,
+                                ),
+                              )
+                            }
+                          />
+                          <span>g</span>
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                {!validThresholds && (
+                  <p className="cloud-form-error" role="alert">
+                    Each IMU requires 0 &lt; T1 &lt; T2 ≤ 10 g.
+                  </p>
+                )}
+
+                {owner && (
+                  <button
+                    className="button secondary"
+                    disabled={busy || !active || !validThresholds}
+                  >
+                    Save cloud thresholds
+                  </button>
+                )}
+              </form>
+            </section>
+          ) : null,
+          sharing: snapshot ? (
+            <section className="card cloud-sharing">
+              <div className="card-heading">
+                <div>
+                  <h2>
+                    <Users size={18} />
+                    Session observers
+                  </h2>
+                  <p>Only the owner can grant read-only access.</p>
+                </div>
+              </div>
+              {owner ? (
+                <>
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (!repository) return;
+                      void act(async () => {
+                        await repository.shareSession(
+                          snapshot.session.id,
+                          sharingEmail.trim(),
+                        );
+                        setSharingEmail("");
+                        await cloud.refreshSnapshot();
+                      }, "Observer access granted. The observer must sign in to this same Supabase project.");
+                    }}
+                  >
+                    <label htmlFor="observer-email">
+                      Existing account email
+                    </label>
+                    <div>
+                      <input
+                        id="observer-email"
+                        type="email"
+                        value={sharingEmail}
+                        onChange={(event) =>
+                          setSharingEmail(event.target.value)
+                        }
+                        required
+                        placeholder="observer@example.com"
+                      />
+                      <button className="button secondary" disabled={busy}>
+                        Share session
+                      </button>
+                    </div>
+                  </form>
+                  <div className="ws-pager">
+                    <button
+                      disabled={observerPage === 0}
+                      onClick={() => setObserverPage((p) => p - 1)}
+                    >
+                      Previous observer
+                    </button>
+                    <span>
+                      {snapshot.observers.length
+                        ? Math.min(observerPage + 1, snapshot.observers.length)
+                        : 0}{" "}
+                      / {snapshot.observers.length}
+                    </span>
+                    <button
+                      disabled={observerPage + 1 >= snapshot.observers.length}
+                      onClick={() => setObserverPage((p) => p + 1)}
+                    >
+                      Next observer
+                    </button>
+                  </div>
+                  <ul className="cloud-observer-list">
+                    {snapshot.observers
+                      .slice(observerPage, observerPage + 1)
+                      .map((observer) => (
+                        <li key={observer.user_id}>
+                          <span>{observer.user_id}</span>
+                          <button
+                            className="text-button"
+                            disabled={busy}
+                            onClick={() => {
+                              if (!repository) return;
+                              void act(async () => {
+                                await repository.revokeObserver(
+                                  snapshot.session.id,
+                                  observer.user_id,
+                                );
+                                await cloud.refreshSnapshot();
+                              }, "Observer access revoked in the database.");
+                            }}
+                          >
+                            Revoke access
+                          </button>
+                        </li>
+                      ))}
+                  </ul>
+                </>
+              ) : (
+                <div className="cloud-readonly">
+                  <ShieldCheck size={23} />
+                  <strong>Read-only observer</strong>
+                  <p>
+                    You can view this session’s route, events, history, and
+                    thresholds. Upload and sharing controls belong to its owner.
+                  </p>
+                </div>
+              )}
+            </section>
+          ) : null,
+          tools:
+            snapshot && owner ? (
+              <section className="demo-controls cloud-test-controls">
+                <div className="demo-controls-title">
+                  <span className="demo-icon">
+                    <Play size={15} />
+                  </span>
+                  <div>
+                    <strong>
+                      {snapshot.session.data_source === "simulated"
+                        ? "Test cloud delivery with simulated telemetry"
+                        : "Device session controls"}
+                    </strong>
+                    <span>
+                      {snapshot.session.data_source === "simulated"
+                        ? "GPS ~1 Hz · Three IMUs send threshold events only · No raw IMU uploads"
+                        : "Device sessions never fall back to generated telemetry."}
+                    </span>
+                  </div>
+                </div>
+                <div className="demo-actions">
+                  {snapshot.session.data_source === "simulated" && active && (
+                    <button
+                      className="button secondary"
+                      onClick={() => {
+                        if (feeding) {
+                          stopDrive();
+                          setNotice(
+                            "Cloud test drive stopped. Its last heartbeat ages out after 15 seconds.",
+                          );
+                        } else startDrive();
+                      }}
+                    >
+                      {feeding ? <Square size={14} /> : <Play size={14} />}{" "}
+                      {feeding
+                        ? "Stop cloud test drive"
+                        : "Start cloud test drive"}
+                    </button>
+                  )}
+                  {active && (
+                    <button
+                      className="button primary"
+                      disabled={busy}
+                      onClick={() => {
+                        if (!repository) return;
+                        stopDrive();
+                        void act(async () => {
+                          await repository.finishSession(snapshot.session.id);
+                          await cloud.refreshSessions();
+                          await cloud.refreshSnapshot();
+                        }, "Session completed. Delayed packets within the session time window can still be recorded.");
+                      }}
+                    >
+                      Complete session
+                    </button>
+                  )}
+                </div>
+              </section>
+            ) : null,
+          account: (
+            <section className="ws-account">
+              <h2>Account</h2>
+              <p>{auth.user.email}</p>
+
+              <div className="cloud-top-actions">
+                <label className="cloud-source-label">
+                  Telemetry source
+                  <select
+                    aria-label="Telemetry source"
+                    value="cloud"
+                    onChange={(event) =>
+                      onModeChange(
+                        event.target.value as TelemetryMode | "cloud",
+                      )
+                    }
+                  >
+                    <option value="simulation">Live simulation</option>
+                    <option value="event-only">Event-only preview</option>
+                    <option value="cloud">Supabase cloud</option>
+                  </select>
+                </label>
+                {auth.user && (
+                  <button
+                    className="button secondary"
+                    onClick={() => {
+                      stopDrive();
+                      void auth.signOut();
+                    }}
+                    disabled={auth.loading}
+                  >
+                    <LogOut size={14} />
+                    Sign out
+                  </button>
+                )}
+              </div>
+            </section>
+          ),
+        }}
+      />
+    );
+
   return (
-    <div className="cloud-shell">
+    <div className="cloud-shell cloud-auth-shell">
       <header className="cloud-topbar">
         <a
           className="cloud-brand"
@@ -463,731 +791,8 @@ export function CloudDashboard({ onModeChange }: Props) {
           </section>
         ) : !auth.user ? (
           <CloudAuth auth={auth} />
-        ) : (
-          <>
-            <section className="card cloud-session-toolbar">
-              <div className="cloud-session-choice">
-                <label htmlFor="cloud-session">Cloud driving session</label>
-                <select
-                  id="cloud-session"
-                  value={selectedId ?? ""}
-                  onChange={(event) => {
-                    stopDrive();
-                    cloud.setSelectedId(event.target.value || null);
-                  }}
-                >
-                  <option value="">
-                    {cloud.loading ? "Loading sessions…" : "Choose a session"}
-                  </option>
-                  {sessions.map((session) => (
-                    <option key={session.id} value={session.id}>
-                      {session.label} · {session.data_source} ·{" "}
-                      {session.ended_at ? "completed" : "active"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                className="button secondary"
-                onClick={() =>
-                  void act(async () => {
-                    await cloud.refreshSessions();
-                    await cloud.refreshSnapshot();
-                  }, "Cloud records refreshed.")
-                }
-                disabled={busy}
-              >
-                <RefreshCw size={14} />
-                Refresh records
-              </button>
-              <form
-                className="cloud-create"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (!repository) return;
-                  void act(async () => {
-                    const id = await repository.createSession(
-                      label.trim(),
-                      dataSource,
-                    );
-                    await cloud.refreshSessions();
-                    cloud.setSelectedId(id);
-                    setLabel("");
-                    setTab("overview");
-                  }, "Cloud session created with three IMU threshold configurations.");
-                }}
-              >
-                <input
-                  aria-label="Session name"
-                  placeholder="Name your next session"
-                  value={label}
-                  onChange={(event) => setLabel(event.target.value)}
-                  maxLength={100}
-                  required
-                />
-                <select
-                  aria-label="Cloud data source"
-                  value={dataSource}
-                  onChange={(event) =>
-                    setDataSource(event.target.value as "simulated" | "device")
-                  }
-                >
-                  <option value="simulated">Simulated data</option>
-                  <option value="device">Device data</option>
-                </select>
-                <button className="button primary" disabled={busy}>
-                  <Plus size={14} />
-                  New cloud session
-                </button>
-              </form>
-            </section>
-            {(cloud.error || actionError || auth.error) && (
-              <div className="cloud-message cloud-error" role="alert">
-                <WifiOff size={16} />
-                {actionError || cloud.error || auth.error}
-              </div>
-            )}
-            {notice && (
-              <div className="cloud-message" role="status">
-                <Check size={15} />
-                {notice}
-              </div>
-            )}
-            {!online && (
-              <div className="cloud-message cloud-error" role="status">
-                <WifiOff size={16} />
-                Browser offline · Live updates are unconfirmed. Reconnect, then
-                refresh records.
-              </div>
-            )}
-            <nav className="cloud-tabs" aria-label="Cloud navigation">
-              {(["overview", "history", "events"] as const).map((value) => (
-                <button
-                  key={value}
-                  aria-current={tab === value ? "page" : undefined}
-                  className={tab === value ? "active" : ""}
-                  onClick={() => setTab(value)}
-                >
-                  {
-                    {
-                      overview: "Live overview",
-                      history: "Session history",
-                      events: "Event analysis",
-                    }[value]
-                  }
-                </button>
-              ))}
-              <span className={`cloud-sync cloud-sync-${cloud.realtimeStatus}`}>
-                <i />
-                {cloud.realtimeStatus === "subscribed"
-                  ? "Realtime connected"
-                  : cloud.realtimeStatus === "connecting"
-                    ? "Connecting realtime…"
-                    : "Realtime unavailable · reconciling every 10s"}
-              </span>
-            </nav>
-            {tab === "history" ? (
-              <CloudSessionHistory
-                sessions={sessions}
-                snapshot={snapshot}
-                selectedId={selectedId}
-                userId={auth.user.id}
-                now={now}
-                onSelect={(id) => {
-                  stopDrive();
-                  cloud.setSelectedId(id);
-                }}
-                onEvents={() => setTab("events")}
-                onExport={exportSession}
-                map={renderReviewMap(true)}
-                loading={cloud.loading}
-                error={cloud.error}
-              />
-            ) : !snapshot ? (
-              <section className="card cloud-empty">
-                <Database size={32} />
-                <h2>
-                  {cloud.loading
-                    ? "Loading authorized session records…"
-                    : "Choose or create a cloud session"}
-                </h2>
-                <p>
-                  Sessions are private until the owner shares access. Local demo
-                  records are never used as a cloud fallback.
-                </p>
-              </section>
-            ) : (
-              <>
-                <div className="cloud-session-caption">
-                  <div>
-                    <h2>{snapshot.session.label}</h2>
-                    <span
-                      className={`cloud-source-chip ${snapshot.session.data_source}`}
-                    >
-                      {snapshot.session.data_source === "simulated"
-                        ? "SIMULATED CLOUD DATA"
-                        : "DEVICE TELEMETRY"}
-                    </span>
-                    <span>{owner ? "Owner" : "Observer · read only"}</span>
-                    <span>
-                      {active
-                        ? "Active session"
-                        : "Completed session · Historical records"}
-                    </span>
-                  </div>
-                  <div className="session-caption-actions">
-                    <button
-                      className="button secondary"
-                      onClick={showThresholds}
-                    >
-                      <Settings2 size={14} />
-                      Threshold settings
-                    </button>
-                    <button
-                      className="button secondary"
-                      onClick={exportSession}
-                    >
-                      <ArrowDownToLine size={14} />
-                      Export session
-                    </button>
-                  </div>
-                </div>
-                <section className="stats-grid cloud-stats">
-                  <Stat
-                    icon={MapPin}
-                    label="GPS availability"
-                    value={
-                      gpsLive
-                        ? "Recent fix"
-                        : gps.length
-                          ? "Historical"
-                          : "No GPS"
-                    }
-                    detail={`${age(fix?.recorded_at, now)} · Freshness limit 5s`}
-                    tone={gpsLive ? "text-green" : "text-muted"}
-                  />
-                  <Stat
-                    icon={Route}
-                    label="Recorded route"
-                    value={routeDistanceKm(gps).toFixed(2)}
-                    suffix="km"
-                    detail={`${gps.length} stored GPS fixes · Source-time order`}
-                  />
-                  <Stat
-                    icon={Zap}
-                    label="Threshold events"
-                    value={String(events.length).padStart(2, "0")}
-                    detail="Historical reports · No current IMU readings"
-                  />
-                  <Stat
-                    icon={gatewayState === "fresh" ? Radio : WifiOff}
-                    label="Gateway availability"
-                    value={
-                      !online
-                        ? "Browser offline"
-                        : !active
-                          ? "Completed"
-                          : gatewayState === "fresh"
-                            ? "Recent report"
-                            : gatewayState === "disconnected"
-                              ? "Disconnected"
-                              : gatewayState === "stale"
-                                ? "Stale"
-                                : "Unknown"
-                    }
-                    detail={`${age(snapshot.connection?.recorded_at, now)} · Heartbeat limit 15s`}
-                    tone={
-                      gatewayState === "fresh" && active
-                        ? "text-green"
-                        : "text-muted"
-                    }
-                  />
-                </section>
-                {tab === "events" ? (
-                  <EventAnalysis
-                    key={snapshot.session.id}
-                    events={analysisEvents}
-                    now={now}
-                    selectedId={selectedEventId}
-                    onSelect={setSelectedEventId}
-                    map={renderReviewMap()}
-                  />
-                ) : (
-                  <>
-                    <div className="cloud-live-grid">
-                      <section className="card cloud-map-card">
-                        <div className="card-heading">
-                          <div>
-                            <h2>
-                              <MapPin size={18} />
-                              Live GPS route
-                            </h2>
-                            <p>
-                              {gpsLive
-                                ? "Recent source GPS · Not inferred from event arrival"
-                                : "Current GPS unavailable or stale · Recorded route remains visible"}
-                            </p>
-                          </div>
-                          <span
-                            className={`live-badge ${gpsLive ? "" : "offline"}`}
-                          >
-                            <i />
-                            {gpsLive ? "RECENT GPS" : "NO CURRENT GPS"}
-                          </span>
-                        </div>
-                        <VehicleMap
-                          key={snapshot.session.id}
-                          position={
-                            gpsLive && fix
-                              ? {
-                                  latitude: fix.latitude,
-                                  longitude: fix.longitude,
-                                }
-                              : null
-                          }
-                          heading={fix?.heading ?? 0}
-                          events={eventMarkers}
-                          route={route}
-                          available={gpsLive}
-                          sourceLabel={
-                            snapshot.session.data_source === "simulated"
-                              ? "Simulated cloud vehicle"
-                              : "Device GPS position"
-                          }
-                          mapLabel="Live GPS route of cloud driving session"
-                          gpsStatusLabel="Recent GPS fix"
-                          fitRoute
-                          selectedEventId={selectedEventId}
-                          onEventSelect={setSelectedEventId}
-                        />
-                        <div className="map-footer">
-                          <span>
-                            <Route size={14} />
-                            {gps.length} GPS fixes · {eventMarkers.length} event
-                            locations
-                          </span>
-                          <span>
-                            {gpsLive &&
-                            fix?.speed_kph !== null &&
-                            fix?.speed_kph !== undefined
-                              ? Math.round(fix.speed_kph)
-                              : "—"}{" "}
-                            km/h
-                          </span>
-                        </div>
-                        {selectedEventId && (
-                          <p className="map-selection-note" role="status">
-                            {analysisEvents.find(
-                              (e) => e.id === selectedEventId,
-                            )?.position
-                              ? "Selected historical event highlighted on the map."
-                              : "Selected event has no supplied GPS location."}{" "}
-                            <button
-                              className="text-button"
-                              onClick={() => setTab("events")}
-                            >
-                              Inspect event
-                            </button>
-                          </p>
-                        )}
-                        <p className="cloud-gps-times">
-                          Source fix:{" "}
-                          {fix
-                            ? new Date(fix.recorded_at).toLocaleString()
-                            : "Not received"}{" "}
-                          · Cloud receipt:{" "}
-                          {fix
-                            ? new Date(fix.received_at).toLocaleString()
-                            : "Not received"}
-                        </p>
-                      </section>
-                      <div className="observer-right-column">
-                        <ObserverInstruments gps={gps} />
-                        <section
-                          className="cloud-imu-grid"
-                          aria-label="Three IMU event statuses"
-                        >
-                          {imuIds.map((imu_id) => {
-                            const event = events
-                              .filter((item) => item.imu_id === imu_id)
-                              .at(-1);
-                            const threshold = snapshot.thresholds.find(
-                              (item) => item.imu_id === imu_id,
-                            );
-                            return (
-                              <article
-                                className="card cloud-imu-card"
-                                aria-label={`IMU ${imu_id} event status`}
-                                key={imu_id}
-                              >
-                                <div className="cloud-imu-title">
-                                  <span className="cloud-imu-number">
-                                    {imu_id}
-                                  </span>
-                                  <h2>IMU {imu_id}</h2>
-                                  <span
-                                    className="imu-traffic"
-                                    aria-label={`IMU ${imu_id} current measurement unavailable`}
-                                  >
-                                    <i />
-                                    <i />
-                                    <i />
-                                    <i className="active-gray" />
-                                  </span>
-                                  <span className="cloud-unknown">
-                                    <i />
-                                    Current: Unknown
-                                  </span>
-                                </div>
-                                <p>
-                                  Event-only telemetry · Continuous acceleration
-                                  not transmitted
-                                </p>
-                                <div className="imu-reported-peak">
-                                  <span>LAST REPORTED PEAK</span>
-                                  <strong>
-                                    {event?.magnitude === null || !event
-                                      ? "—"
-                                      : event.magnitude.toFixed(2)}
-                                    <small> g</small>
-                                  </strong>
-                                  <span>
-                                    {event?.magnitude === null
-                                      ? "Magnitude not supplied"
-                                      : !event
-                                        ? "No event received"
-                                        : "Historical magnitude · Not current motion"}
-                                  </span>
-                                </div>
-                                <div className="cloud-last-event">
-                                  {event ? (
-                                    <>
-                                      <span
-                                        className={`severity-badge ${event.severity}`}
-                                      >
-                                        <i />
-                                        {event.severity === "critical"
-                                          ? "High impact"
-                                          : "Moderate"}
-                                      </span>
-                                      <span>
-                                        <time dateTime={event.recorded_at}>
-                                          {new Date(
-                                            event.recorded_at,
-                                          ).toLocaleString()}
-                                        </time>{" "}
-                                        · Historical event
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <span>
-                                      No event received · Silence does not
-                                      confirm green
-                                    </span>
-                                  )}
-                                </div>
-                                <footer>
-                                  T1 {threshold?.t1.toFixed(2) ?? "—"} g{" "}
-                                  <span>·</span> T2{" "}
-                                  {threshold?.t2.toFixed(2) ?? "—"} g
-                                </footer>
-                              </article>
-                            );
-                          })}
-                        </section>
-                      </div>
-                    </div>
-                    <section className="card cloud-recent">
-                      <div className="card-heading">
-                        <div>
-                          <h2>
-                            <Zap size={18} />
-                            Recent cloud events
-                          </h2>
-                          <p>
-                            {snapshot.session.data_source === "simulated"
-                              ? "Simulated cloud records"
-                              : "Device reports"}{" "}
-                            · Event time and GPS retained between visits
-                          </p>
-                        </div>
-                        <button
-                          className="text-button"
-                          onClick={() => setTab("events")}
-                        >
-                          View all events
-                        </button>
-                      </div>
-                      <CloudEvents
-                        events={events}
-                        compact
-                        selectedId={selectedEventId}
-                        onSelect={setSelectedEventId}
-                      />
-                    </section>
-                    <div className="cloud-settings-grid">
-                      <section
-                        className="card cloud-threshold-settings"
-                        id="cloud-threshold-settings"
-                        tabIndex={-1}
-                      >
-                        <div className="card-heading">
-                          <div>
-                            <h2>
-                              <Settings2 size={18} />
-                              Three-IMU cloud thresholds
-                            </h2>
-                            <p>
-                              Green A &lt; T1 · Yellow T1 ≤ A ≤ T2 · Red A &gt;
-                              T2
-                            </p>
-                          </div>
-                          <span className="unit-label">
-                            {owner ? "OWNER SETTINGS" : "READ ONLY"}
-                          </span>
-                        </div>
-                        <form
-                          onSubmit={(event) => {
-                            event.preventDefault();
-                            if (!repository || !validThresholds || !owner)
-                              return;
-                            stopDrive();
-                            void act(async () => {
-                              await repository.setThresholds(
-                                snapshot.session.id,
-                                draftThresholds.map((row) => ({
-                                  imu_id: row.imu_id,
-                                  t1: Number(row.t1),
-                                  t2: Number(row.t2),
-                                })),
-                              );
-                              await cloud.refreshSnapshot();
-                            }, "Threshold configurations saved. Restart the cloud test drive to use them. Future hardware must explicitly apply these settings.");
-                          }}
-                        >
-                          <div className="threshold-rule-strip">
-                            <span>Green: A &lt; T1</span>
-                            <span>Yellow: T1 ≤ A ≤ T2</span>
-                            <span>Red: A &gt; T2</span>
-                            <span>Gray: unavailable / stale</span>
-                          </div>
-                          <div className="cloud-threshold-rows">
-                            {draftThresholds.map((row, index) => (
-                              <div key={row.imu_id}>
-                                <strong>IMU {row.imu_id}</strong>
-                                {(["t1", "t2"] as const).map((key) => (
-                                  <label key={key}>
-                                    {key.toUpperCase()}
-                                    <input
-                                      aria-label={`IMU ${row.imu_id} ${key.toUpperCase()}`}
-                                      type="number"
-                                      min="0.1"
-                                      max="10"
-                                      step="0.1"
-                                      value={row[key]}
-                                      disabled={!owner || !active || busy}
-                                      onChange={(event) =>
-                                        setDraftThresholds((old) =>
-                                          old.map((item, i) =>
-                                            i === index
-                                              ? {
-                                                  ...item,
-                                                  [key]: event.target.value,
-                                                }
-                                              : item,
-                                          ),
-                                        )
-                                      }
-                                    />
-                                    <span>g</span>
-                                  </label>
-                                ))}
-                              </div>
-                            ))}
-                          </div>
-                          {!validThresholds && (
-                            <p className="cloud-form-error" role="alert">
-                              Each IMU requires 0 &lt; T1 &lt; T2 ≤ 10 g.
-                            </p>
-                          )}
-                          <p className="cloud-settings-note">
-                            These settings do not reclassify historical events
-                            or confirm current acceleration. Device
-                            configuration delivery belongs to the future phone
-                            gateway.
-                          </p>
-                          {owner && (
-                            <button
-                              className="button secondary"
-                              disabled={busy || !active || !validThresholds}
-                            >
-                              Save cloud thresholds
-                            </button>
-                          )}
-                        </form>
-                      </section>
-                      <section className="card cloud-sharing">
-                        <div className="card-heading">
-                          <div>
-                            <h2>
-                              <Users size={18} />
-                              Session observers
-                            </h2>
-                            <p>Only the owner can grant read-only access.</p>
-                          </div>
-                        </div>
-                        {owner ? (
-                          <>
-                            <form
-                              onSubmit={(event) => {
-                                event.preventDefault();
-                                if (!repository) return;
-                                void act(async () => {
-                                  await repository.shareSession(
-                                    snapshot.session.id,
-                                    sharingEmail.trim(),
-                                  );
-                                  setSharingEmail("");
-                                  await cloud.refreshSnapshot();
-                                }, "Observer access granted. The observer must sign in to this same Supabase project.");
-                              }}
-                            >
-                              <label htmlFor="observer-email">
-                                Existing account email
-                              </label>
-                              <div>
-                                <input
-                                  id="observer-email"
-                                  type="email"
-                                  value={sharingEmail}
-                                  onChange={(event) =>
-                                    setSharingEmail(event.target.value)
-                                  }
-                                  required
-                                  placeholder="observer@example.com"
-                                />
-                                <button
-                                  className="button secondary"
-                                  disabled={busy}
-                                >
-                                  Share session
-                                </button>
-                              </div>
-                            </form>
-                            <ul className="cloud-observer-list">
-                              {snapshot.observers.map((observer) => (
-                                <li key={observer.user_id}>
-                                  <span>{observer.user_id}</span>
-                                  <button
-                                    className="text-button"
-                                    disabled={busy}
-                                    onClick={() => {
-                                      if (!repository) return;
-                                      void act(async () => {
-                                        await repository.revokeObserver(
-                                          snapshot.session.id,
-                                          observer.user_id,
-                                        );
-                                        await cloud.refreshSnapshot();
-                                      }, "Observer access revoked in the database.");
-                                    }}
-                                  >
-                                    Revoke access
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                            <p className="cloud-settings-note">
-                              Access is enforced by row-level security.
-                              Membership changes are reconciled within 10
-                              seconds; unauthorized reads are denied
-                              immediately.
-                            </p>
-                          </>
-                        ) : (
-                          <div className="cloud-readonly">
-                            <ShieldCheck size={23} />
-                            <strong>Read-only observer</strong>
-                            <p>
-                              You can view this session’s route, events,
-                              history, and thresholds. Upload and sharing
-                              controls belong to its owner.
-                            </p>
-                          </div>
-                        )}
-                      </section>
-                    </div>
-                    {owner && (
-                      <section className="demo-controls cloud-test-controls">
-                        <div className="demo-controls-title">
-                          <span className="demo-icon">
-                            <Play size={15} />
-                          </span>
-                          <div>
-                            <strong>
-                              {snapshot.session.data_source === "simulated"
-                                ? "Test cloud delivery with simulated telemetry"
-                                : "Awaiting a future phone gateway"}
-                            </strong>
-                            <span>
-                              {snapshot.session.data_source === "simulated"
-                                ? "GPS ~1 Hz · Three IMUs send threshold events only · No raw IMU uploads"
-                                : "Device sessions never fall back to generated telemetry."}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="demo-actions">
-                          {snapshot.session.data_source === "simulated" &&
-                            active && (
-                              <button
-                                className="button secondary"
-                                onClick={() => {
-                                  if (feeding) {
-                                    stopDrive();
-                                    setNotice(
-                                      "Cloud test drive stopped. Its last heartbeat ages out after 15 seconds.",
-                                    );
-                                  } else startDrive();
-                                }}
-                              >
-                                {feeding ? (
-                                  <Square size={14} />
-                                ) : (
-                                  <Play size={14} />
-                                )}{" "}
-                                {feeding
-                                  ? "Stop cloud test drive"
-                                  : "Start cloud test drive"}
-                              </button>
-                            )}
-                          {active && (
-                            <button
-                              className="button primary"
-                              disabled={busy}
-                              onClick={() => {
-                                if (!repository) return;
-                                stopDrive();
-                                void act(async () => {
-                                  await repository.finishSession(
-                                    snapshot.session.id,
-                                  );
-                                  await cloud.refreshSessions();
-                                  await cloud.refreshSnapshot();
-                                }, "Session completed. Delayed packets within the session time window can still be recorded.");
-                              }}
-                            >
-                              Complete session
-                            </button>
-                          )}
-                        </div>
-                      </section>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-          </>
-        )}
+        ) : null}
+
         <footer className="cloud-footer">
           <span>
             <ShieldCheck size={13} />

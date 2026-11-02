@@ -49,15 +49,13 @@ test("built application exposes install metadata, valid PNG icons, and direct SP
   }
 });
 
-test("installed worker does not cache authenticated telemetry and offline never confirms live GPS", async ({
+test("installed worker preserves auth, permissions and live records without caching telemetry", async ({
   page,
   context,
 }) => {
   const fixture = new CloudFixture();
   await fixture.install(context);
-  await page.route(/https:\/\/(?:[^/]+\.)?tile\.openstreetmap\.org\//, (r) =>
-    r.abort(),
-  );
+  await page.route(/tile\.openstreetmap\.org/, (r) => r.abort());
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.evaluate(async () => {
@@ -67,26 +65,26 @@ test("installed worker does not cache authenticated telemetry and offline never 
   await expect
     .poll(() => page.evaluate(() => !!navigator.serviceWorker.controller))
     .toBe(true);
-  // Authenticate while the service worker controls the production build.
   await page
     .getByLabel("Email address", { exact: true })
     .fill("observer@example.test");
   await page.getByLabel("Password", { exact: true }).fill("fixture-password");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(
-    page.getByText("Observer · read only", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Save thresholds", exact: true }),
-  ).toHaveCount(0);
+  const nav = page.getByRole("navigation", { name: "Observer navigation" });
+  await nav.getByRole("button", { name: "IMUs", exact: true }).click();
+  await page.getByLabel("IMU sensor", { exact: true }).selectOption("2");
   await expect(
     page.getByLabel("IMU 2 event status", { exact: true }),
   ).toContainText("Current: Unknown");
+  await page.getByLabel("IMU information").selectOption("thresholds");
+  await expect(
+    page.getByRole("button", { name: "Save cloud thresholds", exact: true }),
+  ).toHaveCount(0);
+  await nav.getByRole("button", { name: "GPS", exact: true }).click();
+  await page.getByRole("button", { name: "Fix details", exact: true }).click();
   await expect.poll(() => fixture.socketCount).toBe(1);
-  fixture.addGps(fixture.point(3, 37.779, -122.418));
-  await expect(page.locator(".cloud-map-card .map-footer")).toContainText(
-    "3 GPS fixes",
-  );
+  fixture.addGps(fixture.point(3, 37.778, -122.418));
+  await expect(page.locator(".ws-fix-details")).toContainText("37.77800");
   fixture.addEvent({
     ...fixture.events[0],
     id: "40000000-0000-4000-8000-000000000002",
@@ -96,42 +94,29 @@ test("installed worker does not cache authenticated telemetry and offline never 
     magnitude: 1.2,
     recorded_at: new Date().toISOString(),
   });
+  await nav.getByRole("button", { name: "Events", exact: true }).click();
   await expect(
-    page.getByLabel("IMU 1 event status", { exact: true }),
-  ).toContainText("1.20");
-  await page
-    .getByRole("button", { name: "Session history", exact: true })
-    .click();
+    page.getByLabel("Selected event details", { exact: true }),
+  ).toContainText("1.20 g");
+  await expect(page.getByLabel("Event pagination")).toContainText("1 / 2");
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await page.locator(".ws-session-card").click();
   await expect(
-    page.getByLabel("Session review", { exact: true }),
-  ).toContainText("2.14 g");
-  await page
-    .getByRole("button", { name: "Event analysis", exact: true })
-    .click();
-  await expect(page.getByRole("table").locator("tbody tr")).toHaveCount(2);
-  await page
-    .getByRole("button", { name: "Live overview", exact: true })
-    .click();
-  fixture.gps.at(-1)!.recorded_at = new Date().toISOString();
-  await page
-    .getByRole("button", { name: "Refresh records", exact: true })
-    .click();
-  await expect(page.locator(".cloud-map-card .vehicle-map__status")).toHaveText(
-    "Recent GPS fix",
-  );
+    page.getByLabel("Session overview", { exact: true }),
+  ).toContainText("Read-only observer");
   await context.setOffline(true);
-  await expect(
-    page.getByText("Browser offline · Live updates are unconfirmed.", {
-      exact: false,
-    }),
-  ).toBeVisible();
-  await expect(page.locator(".cloud-map-card .vehicle-map__status")).toHaveText(
+  await expect(page.getByLabel("Connection and GPS status")).toContainText(
+    "Offline · Live updates unconfirmed",
+  );
+  await expect(page.getByLabel("Connection and GPS status")).toContainText(
     "GPS unavailable",
   );
   expect(await page.evaluate(() => caches.keys())).toEqual([]);
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
+      () =>
+        document.documentElement.scrollWidth <= innerWidth &&
+        document.documentElement.scrollHeight <= innerHeight,
     ),
   ).toBe(true);
   await context.setOffline(false);
@@ -139,12 +124,15 @@ test("installed worker does not cache authenticated telemetry and offline never 
   await page
     .getByRole("button", { name: "Refresh records", exact: true })
     .click();
-  await expect(page.locator(".cloud-map-card .vehicle-map__status")).toHaveText(
-    "Recent GPS fix",
+  await expect(page.getByLabel("Connection and GPS status")).not.toContainText(
+    "GPS unavailable",
   );
   await page.reload();
+  await expect(nav).toBeVisible();
+  await nav.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByLabel("Settings panel").selectOption("account");
   await expect(
-    page.getByText("Observer · read only", { exact: true }),
+    page.getByText("observer@example.test", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page.getByLabel("Email address", { exact: true })).toBeVisible();
