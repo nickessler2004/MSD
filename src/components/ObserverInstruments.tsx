@@ -2,7 +2,13 @@ import { useState } from "react";
 import type { GpsPoint } from "../domain/cloud";
 
 /** Plots only supplied GPS measurements; missing samples break the trace. */
-export function ObserverInstruments({ gps }: { gps: GpsPoint[] }) {
+export function ObserverInstruments({
+  gps,
+  metric,
+}: {
+  gps: GpsPoint[];
+  metric?: "speed_kph" | "accuracy_m";
+}) {
   const [range, setRange] = useState("all");
   const end = gps.at(-1) ? Date.parse(gps.at(-1)!.recorded_at) : 0;
   const points =
@@ -18,7 +24,6 @@ export function ObserverInstruments({ gps }: { gps: GpsPoint[] }) {
       aria-label="Recorded GPS instruments"
     >
       <div className="instrument-toolbar">
-        <strong>Recorded telemetry</strong>
         <label>
           Window{" "}
           <select
@@ -37,88 +42,95 @@ export function ObserverInstruments({ gps }: { gps: GpsPoint[] }) {
           ["Speed", "km/h", "speed_kph", "#b48bd0"],
           ["GPS quality", "m accuracy", "accuracy_m", "#d9b65f"],
         ] as const
-      ).map(([title, unit, key, color]) => {
-        const values = points.flatMap((p) =>
-          typeof p[key] === "number" ? [p[key] as number] : [],
-        );
-        const max = Math.max(1, ...values);
-        let pen = false;
-        const path = points
-          .map((p) => {
-            const value = p[key];
-            if (value == null) {
-              pen = false;
-              return "";
-            }
-            const x =
-              48 +
-              ((Date.parse(p.recorded_at) - start) / Math.max(1, end - start)) *
-                900;
-            const y = 108 - (value / max) * 72;
-            const command = `${pen ? "L" : "M"}${x},${y}`;
-            pen = true;
-            return command;
-          })
-          .join(" ");
-        return (
-          <div className="instrument-panel" key={key}>
-            <header>
-              <h3>{title}</h3>
-              <span style={{ color }}>━ GPS · {unit}</span>
-            </header>
-            <div className="instrument-scale">
-              <span>{max.toFixed(1)}</span>
-              <span>0</span>
-            </div>
-            <svg
-              viewBox="0 0 1000 138"
-              role="img"
-              aria-label={`${title}: ${values.length} supplied measurements`}
-              preserveAspectRatio="none"
-            >
-              <text x="8" y="43">
-                {max.toFixed(1)}
-              </text>
-              <text x="8" y="112">
-                0
-              </text>
-              <path
-                d={path}
-                stroke={color}
-                fill="none"
-                strokeWidth="2"
-                vectorEffect="non-scaling-stroke"
-              />
-              {points.map((p) =>
-                p[key] == null ? null : (
-                  <circle
-                    key={p.id}
-                    cx={
-                      48 +
-                      ((Date.parse(p.recorded_at) - start) /
-                        Math.max(1, end - start)) *
-                        900
-                    }
-                    cy={108 - ((p[key] as number) / max) * 72}
-                    r="2.5"
-                    fill={color}
-                  />
-                ),
-              )}
-            </svg>
-            {!values.length && (
-              <p className="instrument-empty">
-                No supplied {title.toLowerCase()} measurements
+      )
+        .filter(([, , key]) => !metric || key === metric)
+        .map(([title, unit, key, color]) => {
+          const values = points.flatMap((p) =>
+            typeof p[key] === "number" ? [p[key] as number] : [],
+          );
+          const max = Math.max(1, ...values);
+          let pen = false;
+          const path = points
+            .map((p) => {
+              const value = p[key];
+              if (value == null) {
+                pen = false;
+                return "";
+              }
+              const x =
+                48 +
+                ((Date.parse(p.recorded_at) - start) /
+                  Math.max(1, end - start)) *
+                  900;
+              const y = 108 - (value / max) * 72;
+              const command = `${pen ? "L" : "M"}${x},${y}`;
+              pen = true;
+              return command;
+            })
+            .join(" ");
+          return (
+            <div className="instrument-metric" key={key}>
+              <p className="instrument-value">
+                Last recorded:{" "}
+                {points.at(-1)?.[key] != null
+                  ? key === "speed_kph"
+                    ? `${points.at(-1)![key]!.toFixed(1)} km/h · ${(points.at(-1)![key]! / 1.609344).toFixed(1)} mph`
+                    : `±${points.at(-1)![key]!.toFixed(1)} m`
+                  : "Not supplied"}
               </p>
-            )}
-          </div>
-        );
-      })}
+              <div className="instrument-panel">
+                <header>
+                  <h3>{title}</h3>
+                  <span style={{ color }}>━ GPS · {unit}</span>
+                </header>
+                <div className="instrument-scale">
+                  <span>{max.toFixed(1)}</span>
+                  <span>0</span>
+                </div>
+                <svg
+                  viewBox="0 0 1000 138"
+                  role="img"
+                  aria-label={`${title}: ${values.length} supplied measurements`}
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d={path}
+                    stroke={color}
+                    fill="none"
+                    strokeWidth="2"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  {points.map((p) =>
+                    p[key] == null ? null : (
+                      <circle
+                        key={p.id}
+                        cx={
+                          48 +
+                          ((Date.parse(p.recorded_at) - start) /
+                            Math.max(1, end - start)) *
+                            900
+                        }
+                        cy={108 - ((p[key] as number) / max) * 72}
+                        r="2.5"
+                        fill={color}
+                      />
+                    ),
+                  )}
+                </svg>
+                {!values.length && (
+                  <p className="instrument-empty">
+                    No supplied {title.toLowerCase()} measurements
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
       <div className="instrument-time">
         <span>
           {points[0] ? new Date(start).toLocaleTimeString() : "No GPS fixes"}
         </span>
-        <span>{points.length} recorded fixes · Source timestamps</span>
+        <span>Source timestamps</span>
         <span>{points.length ? new Date(end).toLocaleTimeString() : "—"}</span>
       </div>
     </section>

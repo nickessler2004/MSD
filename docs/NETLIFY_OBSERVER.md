@@ -2,7 +2,7 @@
 
 This is the existing React/Vite observer dashboard, not the phone gateway. Observers use Supabase HTTPS and Realtime (secure WebSockets); Bluetooth and location permissions are not needed. Authentication and the existing owner/observer authorization rules still apply. A public website URL does not grant access to session records.
 
-## What this PR configures
+## Deployment configuration
 
 - Netlify builds the repository root using `npm run build` and serves `dist`, with Node 24. No server or database migration is needed.
 - Netlify builds open in cloud mode (`VITE_OBSERVER_DEFAULT_SOURCE=cloud`). Local development and the standalone design demo retain their existing simulator defaults. The source selector remains available and clearly labels simulation.
@@ -11,19 +11,23 @@ This is the existing React/Vite observer dashboard, not the phone gateway. Obser
 - The service worker has **no fetch handler**, precache, Cache API writes, offline page or background sync. It never stores/replays auth, GPS, IMU events, session history or API responses. Realtime is not intercepted. HTML/manifest/worker use `Cache-Control: no-store`; fingerprinted static assets can use immutable browser caching. The current screen may retain labeled historical records when connection is lost, but existing offline handling removes live GPS confirmation and marks live updates unconfirmed. Initial loading offline fails normally; this is not an offline telemetry application.
 - Existing loading, missing-configuration, failed-authentication, disconnected, stale and unavailable states remain in place. On returning from the background, observe the source timestamps/freshness indicators; do not treat an open app as proof that telemetry is live.
 
-## Phone navigation
+## Screen-fitting observer navigation
 
-At phone widths up to 760px (and short landscape windows up to 950px), the authenticated observer uses fixed bottom navigation:
+The authenticated Supabase observer uses five main tabs on desktop, iPhone Safari and the installed PWA. Pages and content panels fit the available viewport without vertical or horizontal scrolling. Longer collections use pagination. Map panning/zooming and native select/date pickers retain their usual behavior.
 
-- **Overview:** compact GPS freshness, speed, position, accuracy, all three unknown-current IMU statuses with last reported peaks, and the latest historical event. The normal overview is checked to fit 390×844 and 375×667 viewports without scrolling. Long session names, warnings, larger text and shorter/landscape windows may require scrolling so information stays readable.
-- **GPS:** recorded route, vehicle/event markers and supplied GPS speed/accuracy instruments.
-- **IMUs:** the existing three detailed sensor panels. Historical peaks never become current measurements.
-- **Events:** event analysis and a Session History button for reviewing/exporting recorded sessions.
-- **Settings:** session selection, permitted threshold/sharing controls, source selection, account and sign-out. Owner-only actions retain their existing authorization checks.
+Each type of information has one home; there are no mirrored GPS/IMU summary panels or second session-review screen:
 
-[Preview of the phone Overview](pr5/phone-overview.png) — captured from the application with labeled simulated browser fixtures, not real driver data.
+- **Overview:** selected session details, duration, access, recorded distance, fix/report counts and export. Selecting a session from History returns here. Shortcuts open the session browser or reports instead of copying their contents.
+- **GPS:** Map, Speed, Accuracy and Fix details views. Speed and accuracy readings live with their respective charts; position, heading and source/receipt timestamps live in Fix details. Stale fixes are historical, never presented as current measurements.
+- **IMUs:** select IMU 1, 2 or 3, then Availability or Thresholds. This is the only place to view/edit current configuration. View sensor reports opens Events with that sensor selected; past impacts are not copied into the sensor panel.
+- **Events:** original historical reports, filters (including inclusive custom local-time bounds), a paginated discrete sequence, event map and the searchable/status-filtered session History browser. Historical event threshold snapshots are distinct from current configuration and keep their recorded values.
+- **Settings:** New session, Observers, Account & source, Session controls and the guide. Observer memberships page one at a time. Session selection is not repeated here, and thresholds stay under IMUs. The guide has separate status, threshold and sharing topics.
 
-The sticky connection/GPS status strip and manual refresh remain available on every phone view. Switching views keeps the selected session and does not restart authentication or telemetry subscriptions. The bottom bar reserves space for the iPhone Home indicator. Details, lists and settings can scroll; fixed navigation never requires squeezing text to fit. Desktop retains the existing dashboard layout and navigation. The separate gateway app is unchanged.
+Session identity and connection warnings are shared navigation/safety context. Other information is not duplicated across tabs. The header refresh stays available across views. Info opens the guide; Message/Error opens complete notification text with paging for long messages. Switching tabs retains the session, filters, history search and live subscriptions. The bottom bar reserves iPhone Home indicator space. Keyboard-sized visual viewports keep the active settings input and Done editing accessible; other fields return when editing ends.
+
+[Phone preview](pr5/phone-overview.png) and [desktop preview](pr5/desktop-overview.png) use labeled simulated browser fixtures, not real driver data.
+
+Browser coverage checks all views at 320×568, 375×667, 390×844, 667×375, 844×390 and 1440×900. It checks actual content overflow and visible control/data bounds, not just hidden scrollbars; every event, session and observer remains reachable through pagination. A keyboard-sized visual viewport is simulated as an additional check. Physical Safari keyboard, safe-area and installation checks remain in the post-deployment verification below. The local development simulator keeps its separate review layout; the phone gateway and backend are unchanged.
 
 ## Manual Netlify steps
 
@@ -52,9 +56,9 @@ Netlify's free plan has usage limits; monitor its usage dashboard. No paid Netli
 1. Open the final HTTPS URL in **Safari**, not an embedded Messages browser. Sign in with an authorized observer account. Confirm the shared session is available.
 2. Tap **Share → Add to Home Screen** (on current iOS this may be under **More**). Keep the name **MSD Observer**. Enable **Open as Web App** if offered, then tap **Add**.
 3. Launch the new icon. It should open without Safari's normal address bar. Sign in again if the Home Screen app has a separate auth session from Safari. Existing password/session handling is unchanged.
-4. Use the bottom buttons to check Overview, GPS, IMUs, and Events. Open Session History under Events and session/account controls under Settings. Rotate the phone and scroll; verify controls and tables remain usable. No Bluetooth prompt should appear.
-5. With the app open, turn on Airplane Mode. Live updates must become unconfirmed and GPS unavailable; IMUs must not become green from silence. Historical records may remain labeled historical. Restore connectivity and use the refresh button in the connection strip if needed. Fresh source timestamps must return before treating GPS as live.
-6. Close the app, go offline and launch it again: no offline dashboard is promised. Reconnect to sign in or load records. Open Settings and sign out when finished on a shared device.
+4. Use the bottom buttons to check Overview, GPS, IMUs, and Events. Choose sessions through Events → History; use Overview for session details/export, IMUs for configuration, and Settings for account/session actions. Rotate the phone and scroll; verify controls and tables remain usable. No Bluetooth prompt should appear.
+5. With the app open, turn on Airplane Mode. Live updates must become unconfirmed and GPS unavailable; IMUs must not become green from silence. Historical records may remain labeled historical. Restore connectivity and use the header refresh button if needed. Fresh source timestamps must return before treating GPS as live.
+6. Close the app, go offline and launch it again: no offline dashboard is promised. Reconnect to sign in or load records. Open Settings → Account & source and sign out when finished on a shared device.
 7. On a computer, open the same HTTPS address and use the existing authorized sign-in. Install prompts vary by browser; installation is optional.
 
 Before relying on production, test with both an owner and an observer: observer can read shared records but cannot configure thresholds or share sessions; an unrelated account cannot read the session. Use existing authorized data for manual read checks rather than uploading synthetic records to production.

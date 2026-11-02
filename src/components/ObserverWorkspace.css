@@ -1,0 +1,888 @@
+html.observer-screen-fit,
+.observer-screen-fit body,
+.observer-screen-fit #root {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.observer-workspace {
+  height: 100dvh;
+  height: 100svh;
+  width: 100%;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  background: #13181e;
+  color: #e1e6eb;
+  overflow: hidden;
+  --border: #303940;
+}
+.observer-workspace * {
+  box-sizing: border-box;
+}
+.observer-workspace button,
+.observer-workspace select,
+.observer-workspace input {
+  min-height: 36px;
+  border-radius: 6px;
+  border: 1px solid #3a454e;
+  background: #202b35;
+  color: #e1e6eb;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 12px;
+  max-width: 100%;
+}
+.observer-workspace button:focus-visible,
+.observer-workspace select:focus-visible,
+.observer-workspace input:focus-visible {
+  outline: 2px solid #8bbcee;
+  outline-offset: -2px;
+}
+.ws-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.ws-header > div {
+  flex: 1;
+  min-width: 0;
+}
+.ws-header h1 {
+  font-size: 17px;
+  margin: 0;
+  letter-spacing: -0.4px;
+}
+.ws-header .ws-session-name {
+  display: block;
+  border: 0;
+  background: transparent;
+  padding: 2px 0 0;
+  min-height: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+  font-size: 11px;
+  color: #a4b3c6;
+}
+.ws-connection {
+  padding: 5px 12px;
+  background: #1b232a;
+  font-size: 11px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.ws-connection small {
+  font-size: 11px;
+  color: #a4b3c6;
+}
+.ws-main {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+  position: relative;
+  max-width: 1500px;
+  width: 100%;
+  margin: auto;
+  height: 100%;
+}
+.ws-main-nav {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+  padding: 5px 8px calc(5px + env(safe-area-inset-bottom, 0px));
+  background: #1b232a;
+  border-top: 1px solid var(--border);
+}
+.ws-main-nav button {
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 49px;
+  font-size: 11px;
+  background: transparent;
+  padding: 5px 2px;
+}
+.observer-workspace [aria-current="page"] {
+  background: #24405a;
+  color: #c9e5ff;
+  font-weight: 600;
+}
+.ws-views {
+  display: flex;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+.ws-views button {
+  flex: 1;
+  padding: 7px 4px;
+}
+.ws-panel {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #1b232a;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ws-panel h2,
+.ws-main > h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.ws-panel p {
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.5;
+}
+.ws-pager,
+.ws-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.ws-pager span {
+  font:
+    12px ui-monospace,
+    monospace;
+  white-space: nowrap;
+}
+.ws-pager button {
+  flex: 1;
+}
+.ws-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.ws-facts > div {
+  min-width: 0;
+}
+.ws-facts dt {
+  font-size: 11px;
+  color: #a4b3c6;
+  margin-bottom: 4px;
+}
+.ws-facts dd {
+  font-size: 14px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ws-report-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ws-selectors,
+.ws-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.ws-selectors label,
+.ws-filter-grid label,
+.ws-setting-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: 11px;
+  color: #a4b3c6;
+}
+.ws-selectors select,
+.ws-selectors input,
+.ws-filter-grid input,
+.ws-filter-grid select {
+  width: 100%;
+  min-width: 0;
+}
+.ws-setting-select {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.ws-setting-select select {
+  flex: 1;
+}
+.ws-loading {
+  position: absolute;
+  bottom: 20px;
+  left: 24px;
+  background: #1b232a;
+  padding: 8px;
+}
+.ws-map {
+  padding: 0;
+  overflow: hidden;
+  gap: 0;
+}
+.ws-map > p {
+  padding: 6px 12px;
+  flex: 0 0 auto;
+}
+.ws-map .vehicle-map {
+  flex: 1;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  border-radius: 0;
+}
+.ws-map .observer-instruments {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 0;
+}
+.ws-map .instrument-panel {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+.ws-map .instrument-toolbar {
+  padding: 6px 10px;
+}
+.ws-map .instrument-time {
+  font-size: 10px;
+}
+.ws-imu .cloud-imu-grid {
+  display: contents;
+}
+.ws-imu .cloud-imu-card {
+  display: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.ws-imu[data-imu="1"] .cloud-imu-card:nth-child(1),
+.ws-imu[data-imu="2"] .cloud-imu-card:nth-child(2),
+.ws-imu[data-imu="3"] .cloud-imu-card:nth-child(3) {
+  display: block;
+}
+.ws-imu .cloud-imu-card > p {
+  font-size: 12px;
+}
+.ws-imu .cloud-imu-title h2 {
+  font-size: 18px;
+}
+.ws-imu .cloud-unknown {
+  font-size: 12px;
+}
+.ws-imu:not([data-information="report"]) .imu-reported-peak,
+.ws-imu:not([data-information="report"]) .cloud-last-event {
+  display: none;
+}
+.ws-imu:not([data-information="thresholds"]) .cloud-imu-card footer {
+  display: none;
+}
+.ws-imu .cloud-imu-card footer {
+  font:
+    18px ui-monospace,
+    monospace;
+}
+.ws-imu .imu-reported-peak {
+  margin: 10px 0;
+}
+.ws-imu .imu-reported-peak strong {
+  font-size: 30px;
+}
+.ws-imu .cloud-last-event {
+  font-size: 12px;
+}
+.ws-session-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+}
+.ws-session-card span {
+  font-size: 11px;
+  color: #a4b3c6;
+}
+.ws-session-browser .ws-pager {
+  margin-top: auto;
+}
+.ws-setting > .card,
+.ws-setting .cloud-session-toolbar,
+.ws-setting > .cloud-test-controls {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  overflow: visible;
+}
+.ws-setting[data-setting="session"] .cloud-create,
+.ws-setting[data-setting="new"] .cloud-session-choice,
+.ws-setting[data-setting="new"] .cloud-session-toolbar > button {
+  display: none !important;
+}
+.ws-setting .cloud-session-toolbar {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.ws-setting .cloud-create {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0;
+  width: 100%;
+}
+.ws-setting .cloud-create input {
+  min-width: 0;
+}
+.ws-setting .card-heading {
+  padding: 0 0 8px;
+}
+.ws-setting .card-heading h2 {
+  font-size: 16px;
+}
+.ws-setting .card-heading p,
+.ws-setting .cloud-settings-note {
+  font-size: 11px;
+  line-height: 1.4;
+}
+.ws-setting .cloud-threshold-settings form,
+.ws-setting .cloud-sharing form {
+  padding: 0;
+}
+.ws-setting .cloud-threshold-rows {
+  gap: 6px;
+}
+.ws-setting .cloud-threshold-rows > div {
+  padding: 8px;
+  gap: 6px;
+}
+.ws-setting .cloud-threshold-rows label {
+  font-size: 11px;
+}
+.ws-setting .cloud-threshold-rows input {
+  padding: 5px;
+  min-height: 32px;
+}
+.ws-setting .threshold-rule-strip {
+  margin: 0 0 8px;
+  gap: 4px;
+}
+.ws-setting .threshold-rule-strip span {
+  font-size: 10px;
+  padding: 4px;
+}
+.ws-setting .cloud-observer-list {
+  padding: 0;
+  margin: 8px 0;
+}
+.ws-setting .cloud-observer-list li > span {
+  font-size: 11px;
+}
+.ws-setting .cloud-readonly {
+  padding: 12px 0;
+}
+.ws-setting .cloud-top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.ws-setting .cloud-source-label {
+  font-size: 11px;
+}
+.ws-setting .cloud-top-actions .button {
+  font-size: 12px;
+}
+.ws-message p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ws-message .ws-pager {
+  margin-top: auto;
+}
+@media (min-width: 900px) {
+  .ws-main-nav {
+    padding-left: 25%;
+    padding-right: 25%;
+  }
+  .ws-facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-height: 500px) {
+  .ws-header {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  .ws-header h1 {
+    font-size: 14px;
+  }
+  .ws-connection {
+    padding: 3px 12px;
+  }
+  .ws-main {
+    gap: 5px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  .ws-main-nav {
+    padding-top: 3px;
+    padding-bottom: calc(3px + env(safe-area-inset-bottom, 0px));
+  }
+  .ws-main-nav button {
+    min-height: 40px;
+    flex-direction: row;
+  }
+  .ws-panel {
+    padding: 8px;
+    gap: 6px;
+  }
+  .ws-facts,
+  .ws-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .ws-facts dd {
+    font-size: 12px;
+  }
+  .ws-facts dt {
+    margin-bottom: 2px;
+  }
+  .ws-views button,
+  .ws-pager button,
+  .ws-setting-select select {
+    min-height: 30px;
+    padding: 4px;
+  }
+  .ws-setting .cloud-threshold-settings > .card-heading,
+  .ws-setting .cloud-settings-note {
+    display: none;
+  }
+  .ws-setting .threshold-rule-strip {
+    margin-bottom: 4px;
+  }
+  .ws-setting .cloud-threshold-rows > div {
+    padding: 4px;
+    gap: 3px;
+  }
+  .ws-setting .cloud-threshold-rows label {
+    flex-direction: row;
+  }
+  .ws-setting .cloud-threshold-settings form {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+  }
+  .ws-setting .cloud-threshold-rows {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+  .ws-setting .threshold-rule-strip {
+    grid-column: 2;
+    max-width: 230px;
+  }
+  .ws-setting .cloud-threshold-settings button {
+    grid-column: 2;
+  }
+  .ws-imu .cloud-imu-card > p {
+    margin: 5px 0;
+  }
+  .ws-imu .imu-reported-peak {
+    margin: 3px 0;
+  }
+  .ws-imu .imu-reported-peak strong {
+    font-size: 23px;
+  }
+}
+.ws-fix-details {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ws-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cloud-auth-shell {
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.cloud-auth-shell .cloud-topbar {
+  min-height: 56px;
+  padding: 8px 12px;
+}
+.cloud-auth-shell .cloud-main {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+}
+.cloud-auth-shell .cloud-page-heading {
+  margin-bottom: 8px;
+}
+.cloud-auth-shell .cloud-page-heading h1 {
+  font-size: 22px;
+  margin: 0;
+}
+.cloud-auth-shell .cloud-page-heading p,
+.cloud-auth-shell .cloud-page-heading .heading-eyebrow,
+.cloud-auth-shell .cloud-footer,
+.cloud-auth-shell .cloud-auth-intro {
+  display: none;
+}
+.cloud-auth-shell .cloud-auth {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  min-height: 0;
+  display: block;
+}
+.cloud-auth-shell .cloud-auth-form {
+  padding: 14px;
+  gap: 10px;
+}
+.cloud-auth-shell .cloud-auth-form h3 {
+  font-size: 17px;
+  margin: 0;
+}
+.cloud-auth-shell .cloud-auth-form > label {
+  gap: 4px;
+}
+.cloud-auth-shell .cloud-auth-form input {
+  min-height: 36px;
+  padding: 8px;
+  font-size: 16px;
+}
+.cloud-auth-shell .cloud-auth-hint {
+  line-height: 1.4;
+}
+@media (max-height: 500px) {
+  .cloud-auth-shell .cloud-page-heading {
+    display: none;
+  }
+  .cloud-auth-shell .cloud-main {
+    padding: 6px 12px;
+  }
+  .cloud-auth-shell .cloud-auth {
+    max-width: 100%;
+  }
+  .cloud-auth-shell .cloud-auth-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+    gap: 6px;
+    padding: 8px;
+  }
+  .cloud-auth-shell .cloud-auth-form h3 {
+    grid-column: 1 / -1;
+  }
+  .cloud-auth-shell .cloud-auth-form .cloud-auth-hint {
+    grid-column: 1 / -1;
+  }
+  .ws-fix-details {
+    padding: 8px;
+    gap: 6px;
+  }
+  .ws-guide {
+    gap: 6px;
+  }
+}
+.ws-records {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+.ws-records[hidden] {
+  display: none !important;
+}
+.ws-timeline-lane {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ws-timeline-lane > span {
+  width: 45px;
+  font-size: 11px;
+}
+.ws-timeline-lane > div {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  flex: 1;
+  border-bottom: 1px solid #3a454e;
+  min-height: 36px;
+}
+.ws-timeline-lane button {
+  padding: 3px;
+  font-size: 14px;
+  width: 100%;
+}
+.ws-timeline .ws-pager {
+  margin-top: auto;
+}
+@media (max-height: 500px) {
+  .ws-records {
+    gap: 5px;
+  }
+  .ws-timeline {
+    gap: 4px;
+  }
+  .ws-timeline-lane > div {
+    min-height: 28px;
+  }
+  .ws-timeline-lane button {
+    min-height: 28px;
+  }
+  .ws-timeline h2 {
+    font-size: 14px;
+  }
+  .ws-timeline > p {
+    font-size: 11px;
+  }
+}
+.cloud-auth-shell {
+  min-height: 0;
+}
+/* The iPhone visual viewport shrinks under the keyboard. Present the active field,
+   keeping Done and submit available, instead of requiring hidden scrolling. */
+.observer-workspace[data-keyboard="true"] .ws-main-nav,
+.observer-workspace[data-keyboard="true"] .ws-header > div,
+.observer-workspace[data-keyboard="true"]
+  .ws-header
+  > button:not(.ws-done-editing),
+.observer-workspace[data-keyboard="true"] .ws-connection small {
+  display: none;
+}
+.observer-workspace[data-keyboard="true"] .ws-header {
+  padding: 3px 10px;
+}
+.observer-workspace[data-keyboard="true"] .ws-main {
+  padding: 4px 10px;
+  gap: 4px;
+}
+.observer-workspace[data-keyboard="true"] .ws-panel {
+  padding: 6px;
+  gap: 4px;
+}
+.observer-workspace[data-keyboard="true"] .ws-setting .card-heading,
+.observer-workspace[data-keyboard="true"] .ws-setting .cloud-settings-note,
+.observer-workspace[data-keyboard="true"] .ws-setting .threshold-rule-strip,
+.observer-workspace[data-keyboard="true"] .ws-setting .cloud-observer-list,
+.observer-workspace[data-keyboard="true"] .ws-setting .ws-pager {
+  display: none;
+}
+.observer-workspace[data-keyboard="true"]
+  .cloud-threshold-rows
+  > div:not(:focus-within),
+.observer-workspace[data-keyboard="true"]
+  .cloud-threshold-rows
+  label:not(:focus-within),
+.observer-workspace[data-keyboard="true"] .cloud-create select,
+.observer-workspace[data-keyboard="true"]
+  .ws-session-browser:focus-within
+  .ws-session-card,
+.observer-workspace[data-keyboard="true"]
+  .ws-session-browser:focus-within
+  > .ws-pager {
+  display: none;
+}
+.observer-workspace[data-keyboard="true"] .cloud-threshold-rows {
+  grid-template-columns: 1fr;
+}
+.observer-workspace[data-keyboard="true"]
+  .ws-setting
+  .cloud-threshold-settings
+  form {
+  display: flex;
+  align-items: stretch;
+  flex-direction: row;
+  gap: 8px;
+}
+.observer-workspace[data-keyboard="true"] .cloud-threshold-rows > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+}
+.observer-workspace[data-keyboard="true"] .cloud-threshold-rows label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.observer-workspace[data-keyboard="true"] .cloud-threshold-rows input {
+  min-width: 70px;
+}
+.ws-source {
+  font:
+    600 9px ui-monospace,
+    monospace;
+  letter-spacing: 0.7px;
+  color: #b9cee5;
+  margin-left: 6px;
+}
+.observer-workspace input {
+  font-size: 16px;
+}
+.observer-workspace[data-keyboard="true"]
+  .ws-filters
+  .ws-filter-grid
+  > label:not(:focus-within),
+.observer-workspace[data-keyboard="true"]
+  .ws-records:has(.ws-filters input:focus)
+  > .ws-views {
+  display: none;
+}
+/* Thresholds use a sensor selector so numeric values stay readable on small phones. */
+.ws-setting .cloud-threshold-rows {
+  grid-template-columns: 1fr;
+}
+.ws-setting .cloud-threshold-rows > div {
+  display: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.ws-setting .cloud-threshold-rows[data-threshold-sensor="1"] > div:nth-child(1),
+.ws-setting .cloud-threshold-rows[data-threshold-sensor="2"] > div:nth-child(2),
+.ws-setting
+  .cloud-threshold-rows[data-threshold-sensor="3"]
+  > div:nth-child(3) {
+  display: grid;
+}
+.ws-setting .cloud-threshold-rows strong {
+  grid-column: 1 / -1;
+}
+.ws-setting .cloud-threshold-rows input {
+  min-width: 55px;
+}
+.ws-setting .cloud-threshold-settings .card-heading p {
+  display: none;
+}
+.ws-setting .cloud-threshold-settings form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+@media (max-height: 500px) {
+  .ws-setting .cloud-sharing > .card-heading {
+    display: none;
+  }
+  .ws-setting .cloud-threshold-settings form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .ws-setting .cloud-threshold-settings .threshold-rule-strip {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    max-width: 100%;
+  }
+  .ws-setting .cloud-threshold-rows {
+    grid-column: 2;
+    grid-row: 2 / 4;
+  }
+  .ws-setting .cloud-threshold-settings button {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .ws-setting .cloud-form-error {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+}
+.observer-workspace[data-keyboard="true"]
+  .ws-setting
+  .cloud-threshold-settings
+  form {
+  display: flex;
+}
+.ws-session-overview .ws-actions {
+  margin-top: auto;
+}
+.ws-imu-links {
+  display: flex;
+  gap: 6px;
+}
+.ws-imu-links button {
+  flex: 1;
+}
+.observer-workspace[data-keyboard="true"] .ws-imu-links {
+  display: none;
+}
+.observer-workspace .vehicle-map__status,
+.observer-workspace .vehicle-map__coordinates {
+  display: none;
+}
+.instrument-metric {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.observer-workspace .instrument-value {
+  padding: 5px 12px;
+  flex: 0 0 auto;
+  font:
+    12px ui-monospace,
+    monospace;
+}
+/* Threshold editing shares the sensor selector above the panel; no second selector or repeated values. */
+.ws-imu-thresholds .cloud-threshold-settings form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ws-imu-thresholds .cloud-threshold-rows {
+  grid-column: auto;
+  grid-row: auto;
+}
+.ws-imu-thresholds .cloud-threshold-settings button {
+  grid-column: auto;
+  grid-row: auto;
+}
+@media (max-height: 500px) {
+  .ws-imu-thresholds .cloud-threshold-settings form {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .ws-imu-thresholds .cloud-threshold-rows {
+    flex: 1;
+  }
+  .observer-workspace .instrument-value {
+    padding: 3px 10px;
+    font-size: 11px;
+  }
+}
+.observer-workspace select {
+  font-size: 16px;
+}
+.ws-setting .cloud-source-label select {
+  max-width: 100%;
+  font-size: 16px;
+}
