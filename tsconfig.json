@@ -23,6 +23,8 @@
     "playwright.config.ts",
     "tests",
     "playwright.live.config.ts",
-    "validation"
+    "validation",
+    "playwright.pwa.config.ts",
+    "tests-pwa"
   ]
 }
