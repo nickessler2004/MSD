@@ -11,7 +11,7 @@ async function signIn(
     .getByRole("combobox", { name: "Telemetry source" })
     .selectOption("cloud");
   await expect(
-    page.getByRole("heading", { name: "Cloud session monitor" }),
+    page.getByRole("heading", { name: "Observer dashboard" }),
   ).toBeVisible();
   await page.getByLabel("Email address", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
@@ -48,7 +48,9 @@ test("cloud sign-in loads persisted route, event locations, and three unknown IM
   await expect(page.locator(".axis-reading")).toHaveCount(0);
   await expect(page.locator(".sparkline")).toHaveCount(0);
   await expect(page.locator(".traffic-light .green.lit")).toHaveCount(0);
-  await page.getByRole("button", { name: "Cloud events", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Event analysis", exact: true })
+    .click();
   const table = page.getByRole("table");
   await expect(table).toContainText("IMU 2");
   await expect(table).toContainText(/high impact|critical/i);
@@ -135,7 +137,7 @@ test("realtime updates reach two authorized observers and source-time ordering s
         "37.77880",
       );
       await target
-        .getByRole("button", { name: "Cloud events", exact: true })
+        .getByRole("button", { name: "Event analysis", exact: true })
         .click();
       const rows = target.getByRole("table").getByRole("row");
       await expect(rows).toHaveCount(3); // Header + two unique events.
@@ -148,7 +150,7 @@ test("realtime updates reach two authorized observers and source-time ordering s
       .selectOption("cloud");
     await expectSession(page);
     await page
-      .getByRole("button", { name: "Cloud events", exact: true })
+      .getByRole("button", { name: "Event analysis", exact: true })
       .click();
     await expect(page.getByRole("table").getByRole("row")).toHaveCount(3);
   } finally {
@@ -348,7 +350,7 @@ test("device sessions never offer generated cloud uploads, and failed reads do n
   await expect(page.getByRole("alert")).toContainText(/unavailable/i);
   await expect(page.locator(".vehicle-map")).toHaveCount(0);
   await expect(
-    page.getByRole("heading", { name: "Cloud session monitor" }),
+    page.getByRole("heading", { name: "Observer dashboard" }),
   ).toBeVisible();
   await expect(page.locator(".axis-reading")).toHaveCount(0);
   await expect(page.locator(".traffic-light .green.lit")).toHaveCount(0);

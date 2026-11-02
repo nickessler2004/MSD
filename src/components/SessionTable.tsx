@@ -5,9 +5,11 @@ import { date, time, duration } from "../lib/format";
 export function SessionTable({
   sessions,
   now,
+  onReview,
 }: {
   sessions: DrivingSession[];
   now: number;
+  onReview?: (id: string) => void;
 }) {
   return (
     <div className="table-scroll">
@@ -18,7 +20,9 @@ export function SessionTable({
             <th>DURATION</th>
             <th>DISTANCE</th>
             <th>IMPACTS</th>
+            <th>PEAK REPORTED A</th>
             <th>STATUS</th>
+            {onReview && <th>REVIEW</th>}
           </tr>
         </thead>
         <tbody>
@@ -59,6 +63,11 @@ export function SessionTable({
               </td>
               <td>{session.impactCount}</td>
               <td>
+                {session.impactCount && session.maxMagnitude !== null
+                  ? `${session.maxMagnitude.toFixed(2)} g`
+                  : "Not supplied"}
+              </td>
+              <td>
                 <span
                   className={`severity-badge ${session.endedAt ? "completed" : "normal"}`}
                 >
@@ -66,6 +75,16 @@ export function SessionTable({
                   {session.endedAt ? "Completed" : "Recording"}
                 </span>
               </td>
+              {onReview && (
+                <td>
+                  <button
+                    className="text-button"
+                    onClick={() => onReview(session.id)}
+                  >
+                    Review session
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

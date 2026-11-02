@@ -20,6 +20,8 @@ export type VehicleMapProps = {
   mapLabel?: string;
   gpsStatusLabel?: string;
   fitRoute?: boolean;
+  selectedEventId?: string | null;
+  onEventSelect?: (id: string) => void;
 };
 
 const MAP_BOUNDS: L.LatLngBoundsExpression = [
@@ -40,22 +42,22 @@ function offlineMapImage() {
     (_, i) => `<path d="M${i * 75} -300 V1500"/>`,
   ).join("");
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
-    <rect width="1600" height="1100" fill="#e9e9e1"/>
-    <g transform="translate(90 -40) rotate(-8 800 550)" fill="none" stroke="#fbfbf7" stroke-width="13">${horizontalRoads}${verticalRoads}</g>
-    <g fill="#cbdcc5" stroke="#e4e8d9" stroke-width="5">
+    <rect width="1600" height="1100" fill="#151f2c"/>
+    <g transform="translate(90 -40) rotate(-8 800 550)" fill="none" stroke="#263444" stroke-width="13">${horizontalRoads}${verticalRoads}</g>
+    <g fill="#192d2e" stroke="#304340" stroke-width="5">
       <rect x="208" y="440" width="132" height="100" rx="4"/>
       <rect x="430" y="735" width="160" height="95" rx="4"/>
       <rect x="627" y="217" width="104" height="80" rx="4"/>
       <path d="M977 370 l93 -13 33 90 -98 14Z"/>
     </g>
-    <path d="M156 1080 L1284 153" stroke="#f9f8ef" stroke-width="41"/>
-    <path d="M156 1080 L1284 153" stroke="#d5d5ca" stroke-width="1.5"/>
-    <g fill="#8c958b" font-family="Arial,sans-serif" text-anchor="middle" font-size="21" letter-spacing="3">
+    <path d="M156 1080 L1284 153" stroke="#354353" stroke-width="41"/>
+    <path d="M156 1080 L1284 153" stroke="#4d6075" stroke-width="1.5"/>
+    <g fill="#6d839a" font-family="Arial,sans-serif" text-anchor="middle" font-size="21" letter-spacing="3">
       <text x="450" y="405">HAYES VALLEY</text><text x="850" y="450">CIVIC CENTER</text>
       <text x="1190" y="670">SOUTH OF MARKET</text><text x="585" y="920">MISSION DISTRICT</text>
       <text x="1050" y="230">TENDERLOIN</text>
     </g>
-    <g fill="#a0a398" font-family="Arial,sans-serif" text-anchor="middle" font-size="15">
+    <g fill="#8194a8" font-family="Arial,sans-serif" text-anchor="middle" font-size="15">
       <text x="276" y="498">Alamo Square</text><text x="505" y="786">Duboce Park</text>
       <text x="746" y="641" transform="rotate(-39 746 641)">Market Street</text>
       <text x="1190" y="788" transform="rotate(-8 1190 788)">Folsom Street</text>
@@ -82,12 +84,17 @@ export function VehicleMap({
   mapLabel = "Live GPS map of the simulated vehicle in San Francisco",
   gpsStatusLabel = "GPS connected",
   fitRoute = false,
+  selectedEventId = null,
+  onEventSelect,
 }: VehicleMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const vehicle = useRef<L.Marker | null>(null);
   const routeLayers = useRef<L.LayerGroup | null>(null);
   const eventLayers = useRef<L.LayerGroup | null>(null);
+  const eventMarkers = useRef(new Map<string, L.CircleMarker>());
+  const selectCallback = useRef(onEventSelect);
+  selectCallback.current = onEventSelect;
   const following = useRef(true);
   const hasFitRoute = useRef(false);
   const currentPosition = useRef(position);
@@ -185,13 +192,13 @@ export function VehicleMap({
     ]);
     if (coordinates.length < 2) return;
     L.polyline(coordinates, {
-      color: "#fff",
+      color: "#09111b",
       weight: 9,
       opacity: 0.95,
       lineJoin: "round",
     }).addTo(layer);
     L.polyline(coordinates, {
-      color: "#3a7b58",
+      color: "#6bafff",
       weight: 4,
       opacity: 0.85,
       lineJoin: "round",
@@ -200,7 +207,7 @@ export function VehicleMap({
       radius: 5,
       color: "#fff",
       weight: 2,
-      fillColor: "#326b4c",
+      fillColor: "#6bafff",
       fillOpacity: 1,
     }).addTo(layer);
   }, [route]);
@@ -209,6 +216,7 @@ export function VehicleMap({
     const layer = eventLayers.current;
     if (!layer) return;
     layer.clearLayers();
+    eventMarkers.current.clear();
     events.forEach((event) => {
       const marker = L.circleMarker(
         [event.position.latitude, event.position.longitude],
@@ -229,6 +237,27 @@ export function VehicleMap({
       details.textContent = `${new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })} · ${event.position.latitude.toFixed(5)}, ${event.position.longitude.toFixed(5)}`;
       popup.append(title, details);
       marker.bindPopup(popup);
+      eventMarkers.current.set(event.id, marker);
+      marker.on("click", () => selectCallback.current?.(event.id));
+      const element = marker.getElement();
+      if (element) {
+        element.setAttribute("role", "button");
+        element.setAttribute("tabindex", "0");
+        element.setAttribute(
+          "aria-label",
+          `Inspect ${event.severity} map event ${event.id}`,
+        );
+        element.addEventListener("keydown", (key) => {
+          if (
+            (key as KeyboardEvent).key === "Enter" ||
+            (key as KeyboardEvent).key === " "
+          ) {
+            key.preventDefault();
+            marker.openPopup();
+            selectCallback.current?.(event.id);
+          }
+        });
+      }
     });
   }, [events]);
 
@@ -247,6 +276,26 @@ export function VehicleMap({
     hasFitRoute.current = true;
   }, [route, fitRoute]);
 
+  useEffect(() => {
+    eventMarkers.current.forEach((marker, id) => {
+      const selected = id === selectedEventId;
+      marker.setStyle({
+        radius: selected ? 10 : 6,
+        weight: selected ? 3 : 2,
+        color: selected ? "#a8d2ff" : "#fff",
+      });
+      marker.getElement()?.classList.toggle("selected-map-event", selected);
+      marker.getElement()?.setAttribute("aria-pressed", String(selected));
+      if (selected && map.current) {
+        following.current = false;
+        setIsFollowing(false);
+        map.current.panTo(marker.getLatLng(), { animate: false });
+        marker.openPopup();
+      }
+    });
+    if (!selectedEventId) map.current?.closePopup();
+  }, [selectedEventId, events]);
+
   const recenter = () => {
     following.current = true;
     setIsFollowing(true);
@@ -257,6 +306,18 @@ export function VehicleMap({
         map.current.getZoom(),
         { animate: true },
       );
+  };
+
+  const fitRecordedRoute = () => {
+    if (!map.current || !route.length) return;
+    following.current = false;
+    setIsFollowing(false);
+    map.current.fitBounds(
+      L.latLngBounds(
+        route.map((p) => [p.latitude, p.longitude] as L.LatLngTuple),
+      ),
+      { padding: [40, 40], maxZoom: 16, animate: false },
+    );
   };
 
   return (
@@ -294,6 +355,25 @@ export function VehicleMap({
         </div>
         <button
           type="button"
+          className="map-fit"
+          aria-label="Fit recorded route"
+          onClick={fitRecordedRoute}
+          disabled={!route.length}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            aria-hidden="true"
+          >
+            <path d="M8 3H3v5M16 3h5v5M3 16v5h5m8 0h5v-5M8 12h8M12 8v8" />
+          </svg>
+        </button>
+        <button
+          type="button"
           className={`map-recenter ${isFollowing ? "map-recenter--active" : ""}`}
           aria-label="Follow vehicle"
           aria-pressed={isFollowing}
@@ -329,7 +409,7 @@ export function VehicleMap({
         </svg>
         <span>
           {available && position
-            ? `${position.latitude.toFixed(5)}° N, ${Math.abs(position.longitude).toFixed(5)}° W`
+            ? `${Math.abs(position.latitude).toFixed(5)}° ${position.latitude < 0 ? "S" : "N"}, ${Math.abs(position.longitude).toFixed(5)}° ${position.longitude < 0 ? "W" : "E"}`
             : "Awaiting GPS data"}
         </span>
       </div>

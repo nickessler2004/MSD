@@ -94,7 +94,7 @@ for (const target of targets)
           page.getByText("Read-only observer", { exact: true }),
         ).toBeVisible();
       await page
-        .getByRole("button", { name: "Cloud events", exact: true })
+        .getByRole("button", { name: "Event analysis", exact: true })
         .click();
       const table = page.getByRole("table");
       for (const imu of [1, 2, 3])
