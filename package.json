@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:live:dashboard": "playwright test --config playwright.live.config.ts",
-    "build:demo": "node scripts/build-observer-demo.mjs"
+    "build:demo": "node scripts/build-observer-demo.mjs",
+    "test:pwa": "playwright test --config playwright.pwa.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",

@@ -9,7 +9,11 @@ const CloudDashboard = lazy(() =>
 );
 
 export default function App() {
-  const [source, setSource] = useState<TelemetryMode | "cloud">("simulation");
+  const [source, setSource] = useState<TelemetryMode | "cloud">(
+    import.meta.env.VITE_OBSERVER_DEFAULT_SOURCE === "cloud"
+      ? "cloud"
+      : "simulation",
+  );
   return source === "cloud" ? (
     <Suspense
       fallback={
